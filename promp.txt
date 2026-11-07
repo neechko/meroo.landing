@@ -1,0 +1,1 @@
+kenapa foto album music listeningnya tidak ikut muncul di web, apakah bisa thing i've build itu sycronize by github saya, dan bisakah deskripsi sesuai juga dengan readme discord saya karena saya bukan frontend developer hanya code enthusiast yg lagi belajar backend dan front end, serta kenapa bagian contact tidak bisa digunakan untuk mengirim pesan 
