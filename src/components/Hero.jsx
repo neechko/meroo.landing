@@ -77,7 +77,7 @@ export default function Hero({ presence, loading, isLive, isDemo, lastUpdate }) 
                 <Sparkles className="absolute -right-7 -top-2 h-5 w-5 animate-pulse-soft text-fuchsia-300/80" aria-hidden="true" />
               </span>
               <span className="mt-3 block text-[0.52em] font-medium leading-[1.15] tracking-tight text-zinc-300 sm:text-[0.5em]">
-                I build interfaces that feel alive.
+                Still playing the game of life.
               </span>
             </motion.h1>
 
