@@ -18,7 +18,8 @@ const demoFallback = import.meta.env.DEV && import.meta.env.VITE_DEMO_FALLBACK !
 export const site = {
   name: 'meroo__',
   displayName: 'meroo',
-  role: "Castorice's husband",
+  role: 'Code enthusiast',
+  motto: 'still playing the game of life',
   location: 'Indonesia',
   timezone: 'Asia/Jakarta',
 
@@ -32,59 +33,116 @@ export const site = {
   // ── LINKS ─────────────────────────────────────────────────────────
   socials: {
     github: 'https://github.com/neechko',
+    website: 'https://meroo.my.id/',
   },
 
-  // ── HERO ──────────────────────────────────────────────────────────
-  tagline:
-    'I am an ordinary person living in Indonesia, and I am certainly fortunate to have Castoris as my wife.',
-  roles: [
-    "Castorice's husband",
-    'Interface tinkerer',
-    'Castorice apologist',
-    'Lo-fi enjoyer',
-  ],
+  // ── HERO / HUD ────────────────────────────────────────────────────
+  hero: {
+    kicker: 'Player one · sector 07',
+    headline: 'A small world built out of code, music, and anime.',
+    subline: 'Discord bots, half-finished ideas, and a frontend I am still learning.',
+    tagline:
+      'Aspiring backend developer from Indonesia. I build Discord bots with Node.js, connect APIs, and break the frontend until it looks right.',
+  },
+  roles: ['Aspiring backend developer', 'Discord bot tinkerer', 'Code enthusiast', 'Still learning in public'],
 
   // ── ABOUT ─────────────────────────────────────────────────────────
   bio: [
-    'I build front-end interfaces for a living and spend an unreasonable amount of time nudging things one pixel at a time. Most of what I know came from breaking something, reading the docs, and rebuilding it until it made sense.',
-    'This site is half portfolio, half excuse to mess around. The Discord card runs on Lanyard, the motion on Framer Motion, and my sleep schedule on poor decisions.',
+    'I am a beginner who started this journey recently. Most of my time goes into Discord bots: Node.js, Gemini for the AI part, AniList and other APIs for everything else, SQLite to keep the state in place.',
+    'Frontend is still a work in progress. This page is where I practice it. I am not a frontend developer; I just refused to leave it ugly.',
   ],
   skills: {
-    Frontend: ['React', 'JavaScript', 'TypeScript', 'Tailwind CSS', 'Framer Motion'],
-    Backend: ['Node.js', 'Express', 'REST APIs', 'PostgreSQL'],
-    Tools: ['Vite', 'Git', 'GitHub', 'Figma', 'Vercel'],
+    Backend: ['Node.js', 'Discord.js', 'PHP', 'Laravel', 'MySQL', 'SQLite', 'REST APIs', 'Gemini API'],
+    Frontend: ['HTML', 'CSS', 'JavaScript', 'React', 'Tailwind CSS'],
+    Tools: ['Git', 'GitHub', 'Linux', 'PowerShell', 'Vercel', 'VS Code'],
   },
 
-  // ── PROJECTS ──────────────────────────────────────────────────────
+  // ── GITHUB ────────────────────────────────────────────────────────
+  // The project list is fetched from the public GitHub API at runtime.
+  // `featured` decides which repositories are shown first; everything else
+  // follows by latest push. No token is needed for public repositories.
+  github: {
+    username: 'neechko',
+    limit: 5,
+    featured: ['mokachan', 'service.app', 'meroo.landing'],
+  },
+
+  // Hand-written notes override what GitHub returns. Repos without a note
+  // use their GitHub description, or a neutral line when there is none.
+  projectNotes: {
+    mokachan: {
+      description:
+        'Discord bot with a Gemini-powered AI companion and an automatic anime character-claiming game. Memory lives in rolling summaries and SQLite tables.',
+      tags: ['Node.js', 'Gemini', 'AniList', 'SQLite'],
+      accent: 'from-violet-500 via-fuchsia-500 to-pink-500',
+    },
+    'service.app': {
+      description:
+        'TypeScript app with a live deployment at primoraapp.vercel.app. One of the projects I keep coming back to.',
+      tags: ['TypeScript', 'Vercel'],
+      accent: 'from-sky-400 via-cyan-400 to-emerald-400',
+    },
+    'meroo.landing': {
+      description:
+        'This single-screen HUD: live Discord presence, GitHub sync, MyAnimeList, and a contact channel that actually delivers.',
+      tags: ['React', 'Vite', 'Lanyard'],
+      accent: 'from-violet-500 via-indigo-500 to-cyan-400',
+    },
+    'meroo.my.id': {
+      description: 'The old PHP home for meroo.my.id. Still public, still part of the journey.',
+      tags: ['PHP', 'Web'],
+      accent: 'from-slate-400 via-zinc-400 to-stone-300',
+    },
+    'gritinsight-page': {
+      description: 'A small landing page experiment. No README yet, but the code is public.',
+      tags: ['HTML', 'CSS'],
+      accent: 'from-amber-400 via-orange-500 to-rose-500',
+    },
+  },
+
+  // Shown when the GitHub API is unreachable or rate-limited.
   projects: [
     {
-      title: 'meroo.landing',
+      title: 'mokachan',
       description:
-        'The page you are on. React + Vite, a live Discord card, a small glass design system, and about three more animations than it really needs.',
-      tags: ['React', 'Vite', 'Lanyard'],
-      url: 'https://github.com/neechko',
+        'Discord bot with a Gemini-powered AI companion and an automatic anime character-claiming game. Memory lives in rolling summaries and SQLite tables.',
+      tags: ['Node.js', 'Gemini', 'AniList', 'SQLite'],
+      url: 'https://github.com/neechko/mokachan',
       accent: 'from-violet-500 via-fuchsia-500 to-pink-500',
-      icon: 'layers',
+      icon: 'github',
     },
     {
-      title: 'Presence card',
-      description:
-        'The Discord card pulled out of this page: status, custom status, open apps, Spotify progress, reconnect handling, and an offline state that does not pretend.',
-      tags: ['WebSocket', 'REST', 'Tailwind'],
-      url: 'https://github.com/neechko',
+      title: 'service.app',
+      description: 'TypeScript app with a live deployment at primoraapp.vercel.app.',
+      tags: ['TypeScript', 'Vercel'],
+      url: 'https://github.com/neechko/service.app',
       accent: 'from-sky-400 via-cyan-400 to-emerald-400',
-      icon: 'activity',
+      icon: 'github',
     },
     {
-      title: 'GitHub',
-      description:
-        'Everything else ends up here. Experiments, half-finished ideas, and the occasional thing that actually works. The repo list is the honest changelog.',
-      tags: ['code', 'notes', 'WIP'],
-      url: 'https://github.com/neechko',
+      title: 'gritinsight-page',
+      description: 'A small landing page experiment. No README yet, but the code is public.',
+      tags: ['HTML', 'CSS'],
+      url: 'https://github.com/neechko/gritinsight-page',
       accent: 'from-amber-400 via-orange-500 to-rose-500',
       icon: 'github',
     },
   ],
+
+  // ── MYANIMELIST ───────────────────────────────────────────────────
+  // Public list, read through /api/mal so the browser does not hit CORS.
+  // The username below is only used for the profile link and the request.
+  myanimelist: {
+    username: 'meroo__',
+    limit: 6,
+  },
+
+  // ── CONTACT ───────────────────────────────────────────────────────
+  // The form posts to /api/contact, which forwards to a Discord webhook.
+  // Set DISCORD_WEBHOOK_URL on Vercel (server-side only, no VITE_ prefix).
+  contact: {
+    endpoint: '/api/contact',
+  },
 
   // ── OFF THE CLOCK ─────────────────────────────────────────────────
   anime: {
@@ -97,7 +155,7 @@ export const site = {
     description:
       'Some nights I close the editor and do nothing productive. An episode, a game, the same playlist for the fourth time. That is the whole plan.',
     note: 'The wallpaper is Castorice. My sleep schedule is not.',
-    tags: ['anime', 'gacha', 'lo-fi', 'late nights', 'bad aim'],
+    tags: ['anime', 'gacha', 'youtube music', 'late nights', 'bad aim'],
   },
 }
 

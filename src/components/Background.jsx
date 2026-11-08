@@ -1,30 +1,42 @@
 import { useEffect, useRef } from 'react'
 
+function lowPowerHint() {
+  if (typeof navigator === 'undefined') return false
+  const cores = navigator.hardwareConcurrency ?? 8
+  const memory = navigator.deviceMemory ?? 8
+  return cores <= 4 || memory <= 4
+}
+
 function Particles() {
   const canvasRef = useRef(null)
 
   useEffect(() => {
     const canvas = canvasRef.current
     const ctx = canvas?.getContext('2d')
-    if (!canvas || !ctx) return
+    if (!canvas || !ctx) return undefined
 
+    const root = document.documentElement
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    const dpr = Math.min(window.devicePixelRatio || 1, 2)
+    const lite = lowPowerHint()
+    const dpr = Math.min(window.devicePixelRatio || 1, lite ? 1.25 : 1.75)
     const mouse = { x: -9999, y: -9999 }
     let width = 0
     let height = 0
     let particles = []
     let raf = 0
+    let lastDraw = 0
 
     const build = () => {
-      const count = Math.min(80, Math.max(28, Math.floor((width * height) / 30000)))
+      const count = lite
+        ? 30
+        : Math.min(60, Math.max(24, Math.floor((width * height) / 42000)))
       particles = Array.from({ length: count }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
         vx: (Math.random() - 0.5) * 0.22,
         vy: (Math.random() - 0.5) * 0.22,
-        r: Math.random() * 1.6 + 0.5,
-        a: Math.random() * 0.45 + 0.15,
+        r: Math.random() * 1.5 + 0.5,
+        a: Math.random() * 0.42 + 0.14,
       }))
     }
 
@@ -37,10 +49,22 @@ function Particles() {
       canvas.style.height = `${height}px`
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
       build()
-      if (reduced) draw(true)
+      if (reduced) draw(performance.now(), true)
     }
 
-    const draw = (once = false) => {
+    const draw = (time, once = false) => {
+      if (document.hidden && !once) {
+        raf = 0
+        return
+      }
+
+      const liteNow = lite || root.classList.contains('perf-lite')
+      if (!once && liteNow && time - lastDraw < 32) {
+        raf = requestAnimationFrame(draw)
+        return
+      }
+      lastDraw = time
+
       ctx.clearRect(0, 0, width, height)
 
       for (const p of particles) {
@@ -69,32 +93,40 @@ function Particles() {
         ctx.fill()
       }
 
-      // faint lines between nearby particles
-      for (let i = 0; i < particles.length; i += 1) {
-        for (let j = i + 1; j < particles.length; j += 1) {
-          const a = particles[i]
-          const b = particles[j]
-          const d = Math.hypot(a.x - b.x, a.y - b.y)
-          if (d < 110) {
-            ctx.beginPath()
-            ctx.moveTo(a.x, a.y)
-            ctx.lineTo(b.x, b.y)
-            ctx.strokeStyle = `rgba(139, 92, 246, ${0.1 * (1 - d / 110)})`
-            ctx.lineWidth = 0.6
-            ctx.stroke()
+      // Faint lines between nearby particles. Skipped in performance mode.
+      if (!liteNow) {
+        const maxD = 104
+        const maxD2 = maxD * maxD
+        for (let i = 0; i < particles.length; i += 1) {
+          for (let j = i + 1; j < particles.length; j += 1) {
+            const a = particles[i]
+            const b = particles[j]
+            const dx = a.x - b.x
+            const dy = a.y - b.y
+            const d2 = dx * dx + dy * dy
+            if (d2 < maxD2) {
+              const d = Math.sqrt(d2)
+              ctx.beginPath()
+              ctx.moveTo(a.x, a.y)
+              ctx.lineTo(b.x, b.y)
+              ctx.strokeStyle = `rgba(139, 92, 246, ${0.1 * (1 - d / maxD)})`
+              ctx.lineWidth = 0.6
+              ctx.stroke()
+            }
           }
         }
       }
 
-      // particles reach toward the pointer like a small constellation
+      // Particles reach toward the pointer like a small constellation.
       if (mouse.x > -1000) {
+        const reach = liteNow ? 120 : 170
         for (const p of particles) {
           const d = Math.hypot(p.x - mouse.x, p.y - mouse.y)
-          if (d < 170) {
+          if (d < reach) {
             ctx.beginPath()
             ctx.moveTo(p.x, p.y)
             ctx.lineTo(mouse.x, mouse.y)
-            ctx.strokeStyle = `rgba(216, 180, 254, ${0.22 * (1 - d / 170)})`
+            ctx.strokeStyle = `rgba(216, 180, 254, ${0.22 * (1 - d / reach)})`
             ctx.lineWidth = 0.55
             ctx.stroke()
           }
@@ -113,35 +145,97 @@ function Particles() {
       mouse.y = event.clientY
     }
 
+    const onVisibility = () => {
+      if (document.hidden) {
+        cancelAnimationFrame(raf)
+        raf = 0
+        return
+      }
+      if (!reduced && !raf) raf = requestAnimationFrame(draw)
+    }
+
     resize()
-    draw(reduced)
+    if (!reduced) raf = requestAnimationFrame(draw)
     window.addEventListener('resize', resize)
     window.addEventListener('pointermove', onPointer, { passive: true })
+    document.addEventListener('visibilitychange', onVisibility)
 
     return () => {
       cancelAnimationFrame(raf)
       window.removeEventListener('resize', resize)
       window.removeEventListener('pointermove', onPointer)
+      document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [])
 
-  return <canvas ref={canvasRef} className="absolute inset-0 h-full w-full opacity-50" aria-hidden="true" />
+  return (
+    <canvas
+      ref={canvasRef}
+      className="absolute inset-0 h-full w-full opacity-45"
+      aria-hidden="true"
+    />
+  )
 }
 
 export default function Background() {
   const glowRef = useRef(null)
 
+  // Enable the lighter CSS profile on weak hardware, or if the measured
+  // frame rate stays below 42fps. Sampling keeps running for a few windows so
+  // a slow HUD is still caught if the visitor waits before entering.
+  useEffect(() => {
+    const root = document.documentElement
+    if (lowPowerHint()) root.classList.add('perf-lite')
+
+    let raf = 0
+    let frames = 0
+    let started = 0
+    let windows = 0
+
+    const sample = (now) => {
+      if (root.classList.contains('perf-lite')) return
+      if (!started) started = now
+      frames += 1
+      if (now - started >= 2000) {
+        const fps = (frames * 1000) / (now - started)
+        if (fps < 42) {
+          root.classList.add('perf-lite')
+          return
+        }
+        windows += 1
+        frames = 0
+        started = now
+        if (windows >= 6) return
+      }
+      raf = requestAnimationFrame(sample)
+    }
+
+    const timer = window.setTimeout(() => {
+      raf = requestAnimationFrame(sample)
+    }, 1400)
+
+    return () => {
+      window.clearTimeout(timer)
+      cancelAnimationFrame(raf)
+    }
+  }, [])
+
   useEffect(() => {
     let frame = 0
+    let nextX = -9999
+    let nextY = -9999
+
     const onMove = (event) => {
+      nextX = event.clientX
+      nextY = event.clientY
       if (frame) return
       frame = requestAnimationFrame(() => {
         frame = 0
         if (!glowRef.current) return
-        glowRef.current.style.setProperty('--x', `${event.clientX}px`)
-        glowRef.current.style.setProperty('--y', `${event.clientY}px`)
+        glowRef.current.style.transform = `translate3d(${nextX - 380}px, ${nextY - 380}px, 0)`
       })
     }
+
     window.addEventListener('pointermove', onMove, { passive: true })
     return () => {
       cancelAnimationFrame(frame)
@@ -151,7 +245,7 @@ export default function Background() {
 
   return (
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
-      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(76,29,149,0.35),transparent_70%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(76,29,149,0.38),transparent_70%)]" />
 
       <div className="aurora-blob -left-32 -top-40 h-[34rem] w-[34rem] bg-violet-600/45" />
       <div
@@ -159,7 +253,7 @@ export default function Background() {
         style={{ animationDelay: '-8s', animationDuration: '28s' }}
       />
       <div
-        className="aurora-blob bottom-[-12%] left-[28%] h-[32rem] w-[32rem] bg-blue-600/25"
+        className="aurora-blob aurora-3 bottom-[-12%] left-[28%] h-[32rem] w-[32rem] bg-cyan-500/20"
         style={{ animationDelay: '-15s', animationDuration: '32s' }}
       />
 
@@ -168,28 +262,13 @@ export default function Background() {
 
       <div
         ref={glowRef}
-        className="absolute inset-0 hidden md:block"
-        style={{ '--x': '-1000px', '--y': '-1000px' }}
-      >
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              'radial-gradient(720px circle at var(--x, -1000px) var(--y, -1000px), rgba(139,92,246,0.12), transparent 68%)',
-          }}
-        />
-        <div
-          className="absolute inset-0 mix-blend-screen"
-          style={{
-            background:
-              'radial-gradient(190px circle at var(--x, -1000px) var(--y, -1000px), rgba(233,213,255,0.13), transparent 72%)',
-          }}
-        />
-      </div>
+        className="pointer-glow"
+        style={{ transform: 'translate3d(-9999px, -9999px, 0)' }}
+      />
 
       <div className="noise absolute inset-0" />
       <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-violet-400/70 to-transparent" />
-      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#06040f] to-transparent" />
+      <div className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-t from-[#05030c] to-transparent" />
     </div>
   )
 }

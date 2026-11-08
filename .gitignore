@@ -6,6 +6,7 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
+plan.txt
 
 # Dependencies
 node_modules
@@ -37,4 +38,3 @@ Thumbs.db
 *.sln
 *.sw?
 
-promp.txt
