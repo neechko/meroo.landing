@@ -1,4 +1,5 @@
 import { useEffect, useRef } from 'react'
+import { usePointerParallax } from '../lib/usePointerParallax'
 
 function lowPowerHint() {
   if (typeof navigator === 'undefined') return false
@@ -179,6 +180,7 @@ function Particles() {
 
 export default function Background() {
   const glowRef = useRef(null)
+  const sceneRef = usePointerParallax({ x: 16, y: 12, scale: 1.05 })
 
   // Enable the lighter CSS profile on weak hardware, or if the measured
   // frame rate stays below 42fps. Sampling keeps running for a few windows so
@@ -247,17 +249,21 @@ export default function Background() {
     <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden" aria-hidden="true">
       <div className="absolute inset-0 bg-[radial-gradient(ellipse_80%_60%_at_50%_-10%,rgba(76,29,149,0.38),transparent_70%)]" />
 
-      <div className="aurora-blob -left-32 -top-40 h-[34rem] w-[34rem] bg-violet-600/45" />
-      <div
-        className="aurora-blob right-[-10%] top-[22%] h-[30rem] w-[30rem] bg-fuchsia-600/25"
-        style={{ animationDelay: '-8s', animationDuration: '28s' }}
-      />
-      <div
-        className="aurora-blob aurora-3 bottom-[-12%] left-[28%] h-[32rem] w-[32rem] bg-cyan-500/20"
-        style={{ animationDelay: '-15s', animationDuration: '32s' }}
-      />
+      <div ref={sceneRef} className="scene-parallax absolute -inset-6">
+        <div className="aurora-blob -left-32 -top-40 h-[34rem] w-[34rem] bg-violet-600/45" />
+        <div
+          className="aurora-blob right-[-10%] top-[22%] h-[30rem] w-[30rem] bg-fuchsia-600/25"
+          style={{ animationDelay: '-8s', animationDuration: '28s' }}
+        />
+        <div
+          className="aurora-blob aurora-3 bottom-[-12%] left-[28%] h-[32rem] w-[32rem] bg-cyan-500/20"
+          style={{ animationDelay: '-15s', animationDuration: '32s' }}
+        />
 
-      <div className="absolute inset-0 grid-lines" />
+        <div className="absolute inset-0 grid-lines" />
+        <div className="scene-sheen absolute inset-0" />
+      </div>
+
       <Particles />
 
       <div

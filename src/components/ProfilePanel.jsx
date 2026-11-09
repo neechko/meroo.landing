@@ -23,7 +23,7 @@ const LINKS = [
   { label: 'Website', href: site.socials.website, Icon: Globe },
 ].filter((link) => Boolean(link.href))
 
-export default function ProfilePanel({ presence, onContact, views, className = '' }) {
+export default function ProfilePanel({ presence, onContact, onReplayTutorial, views, className = '' }) {
   const user = presence?.discord_user
   const status = presence?.discord_status ?? 'offline'
   const meta = statusMeta(status)
@@ -135,9 +135,16 @@ export default function ProfilePanel({ presence, onContact, views, className = '
               compact
               className="border-0 bg-transparent px-0 py-0"
             />
-            <span className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-zinc-600">
-              live counter
-            </span>
+            {onReplayTutorial ? (
+              <button
+                type="button"
+                onClick={onReplayTutorial}
+                title="Replay the world tutorial"
+                className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-zinc-600 transition hover:text-violet-300"
+              >
+                replay tour
+              </button>
+            ) : null}
           </div>
         </div>
       </div>

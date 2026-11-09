@@ -31,7 +31,7 @@ function TrackProgress({ timestamps, className = '' }) {
 
 function NowPlaying({ track, onPlay }) {
   return (
-    <div className="card-zoom relative overflow-hidden rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.045] p-3 transition duration-300 hover:scale-[1.012] hover:border-emerald-300/30">
+    <div className="card-zoom relative overflow-hidden rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.045] p-3 transition duration-300 hover:border-emerald-300/30">
       {track.art ? (
         <img
           src={track.art}
@@ -44,7 +44,7 @@ function NowPlaying({ track, onPlay }) {
         <AlbumArt
           src={track.art}
           alt={track.album || track.title}
-          className="h-[66px] w-[66px]"
+          className="h-[60px] w-[60px] shrink-0"
           rounded="rounded-xl"
         />
         <div className="min-w-0 flex-1">
@@ -60,36 +60,37 @@ function NowPlaying({ track, onPlay }) {
             <p className="truncate font-mono text-[8.5px] uppercase tracking-[0.12em] text-zinc-500">{track.album}</p>
           ) : null}
         </div>
+
+        {/* Actions stay on the side of the card header, above the activity
+            rows, so neither one can ever be covered by what sits below. */}
+        <div className="relative z-[2] flex shrink-0 flex-col items-stretch gap-1.5">
+          {track.embed ? (
+            <button
+              type="button"
+              onClick={onPlay}
+              aria-label={`Play ${track.title} here`}
+              title="Play here"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-400/15 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-200 ring-1 ring-emerald-400/30 transition hover:bg-emerald-400/25 active:scale-95"
+            >
+              <Play className="h-3 w-3 fill-current" />
+              Play here
+            </button>
+          ) : null}
+          {track.external ? (
+            <a
+              href={track.external}
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[10px] font-medium text-zinc-300 transition hover:border-white/20 hover:text-white"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Open source
+            </a>
+          ) : null}
+        </div>
       </div>
 
       <TrackProgress timestamps={track.progress} className="relative mt-3" />
-
-      <div className="relative mt-2.5 flex items-center gap-1.5">
-        {track.embed ? (
-          <button
-            type="button"
-            onClick={onPlay}
-            className="inline-flex items-center gap-1.5 rounded-lg bg-emerald-400/15 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-200 ring-1 ring-emerald-400/30 transition hover:bg-emerald-400/25 active:scale-95"
-          >
-            <Play className="h-3 w-3 fill-current" />
-            Play here
-          </button>
-        ) : null}
-        {track.external ? (
-          <a
-            href={track.external}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[10px] font-medium text-zinc-300 transition hover:border-white/20 hover:text-white"
-          >
-            <ExternalLink className="h-3 w-3" />
-            Open source
-          </a>
-        ) : null}
-        <span className="ml-auto font-mono text-[8.5px] uppercase tracking-[0.14em] text-zinc-600">
-          discord → site
-        </span>
-      </div>
     </div>
   )
 }

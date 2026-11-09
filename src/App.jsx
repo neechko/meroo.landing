@@ -6,17 +6,18 @@ import Intro from './components/Intro'
 import World from './components/World'
 
 export default function App() {
-  const [entered, setEntered] = useState(false)
-  const enter = useCallback(() => setEntered(true), [])
+  const [phase, setPhase] = useState('intro')
+
+  const enterWorld = useCallback(() => setPhase('world'), [])
 
   return (
     <div className="world-shell relative">
       <Background />
       <Cursor />
-      <World entered={entered} />
+      <World entered={phase === 'world'} />
 
-      <AnimatePresence>
-        {!entered ? <Intro key="intro" onEnter={enter} /> : null}
+      <AnimatePresence mode="wait">
+        {phase === 'intro' ? <Intro key="intro" onEnter={enterWorld} /> : null}
       </AnimatePresence>
     </div>
   )

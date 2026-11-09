@@ -1,6 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Activity, ListVideo, Mail, UserRound } from 'lucide-react'
-import { useState } from 'react'
+import { Activity, ListVideo, Mail, Sparkles, UserRound } from 'lucide-react'
+import { useCallback, useEffect, useState } from 'react'
 import { discordProfileUrl, site } from '../config'
 import { statusMeta, localTime } from '../lib/format'
 import { useGithubRepos } from '../lib/github'
@@ -11,12 +11,14 @@ import { useViews } from '../lib/views'
 import { getNowPlaying } from '../lib/nowPlaying'
 import ActivityPanel from './ActivityPanel'
 import AnimePanel from './AnimePanel'
+import CastoriceViewer from './CastoriceViewer'
 import ContactModal from './ContactModal'
 import GithubPanel from './GithubPanel'
 import { DiscordIcon, GithubIcon } from './icons'
 import MusicPlayer from './MusicPlayer'
 import ProfilePanel from './ProfilePanel'
 import Tilt from './Tilt'
+import Tutorial, { TUTORIAL_ORDER } from './Tutorial'
 import { StatusDot } from './ui'
 import ViewsPill from './ViewsPill'
 
@@ -27,7 +29,19 @@ const TABS = [
   { id: 'profile', label: 'Profile', Icon: UserRound },
 ]
 
-function HudHeader({ presence, onContact, views }) {
+const REVEAL_INDEX = { activity: 0, github: 1, anime: 2, profile: 3 }
+// Permanent, not per-session: once the tour is finished it stays finished
+// across tabs, refreshes and browser restarts. Replay is offered from the
+// player card if someone wants to see it again.
+const TUTORIAL_KEY = 'meroo.tutorial.v2'
+
+// The 3D scene is a separate chunk. Warming it up on hover (and quietly after
+// the world loads) keeps the archive from showing a long loading state.
+const prefetchCastoriceScene = () => {
+  import('../lib/castoriceScene').catch(() => {})
+}
+
+function HudHeader({ presence, onContact, views, onCastorice }) {
   const now = useNow(30_000)
   const status = presence?.discord_status ?? 'offline'
   const meta = statusMeta(status)
@@ -91,6 +105,18 @@ function HudHeader({ presence, onContact, views }) {
         ) : null}
         <button
           type="button"
+          onClick={onCastorice}
+          onPointerEnter={prefetchCastoriceScene}
+          onFocus={prefetchCastoriceScene}
+          aria-label="Open Castorice archive"
+          title="Open Castorice archive"
+          className="shine group inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-300/35 bg-gradient-to-r from-violet-600/75 via-indigo-600/65 to-cyan-600/55 px-2.5 font-mono text-[9px] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_10px_30px_-14px_rgba(139,92,246,0.9)] transition hover:brightness-110 active:scale-95"
+        >
+          <Sparkles className="relative z-[2] h-3.5 w-3.5" />
+          <span className="relative z-[2] hidden min-[360px]:inline">Castorice</span>
+        </button>
+        <button
+          type="button"
           onClick={onContact}
           className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/10 px-2.5 font-mono text-[9px] font-semibold uppercase tracking-[0.1em] text-violet-200 transition hover:bg-violet-500/20 active:scale-95"
         >
@@ -136,6 +162,19 @@ export default function World({ entered }) {
   const [tab, setTab] = useState('activity')
   const [contactOpen, setContactOpen] = useState(false)
   const [playerTrack, setPlayerTrack] = useState(null)
+  const [castoriceOpen, setCastoriceOpen] = useState(
+    () => typeof window !== 'undefined' && window.location.hash === '#castorice',
+  )
+  const [tutorialDone, setTutorialDone] = useState(() => {
+    try {
+      return window.localStorage.getItem(TUTORIAL_KEY) === '1'
+    } catch {
+      return false
+    }
+  })
+  const [revealed, setRevealed] = useState(() =>
+    tutorialDone ? TUTORIAL_ORDER.length : 0,
+  )
 
   const { presence, isDemo, isLive, lastUpdate, loading, error } = useLanyard(site.discordUserId, {
     demoFallback: site.demoFallback,
@@ -152,6 +191,76 @@ export default function World({ entered }) {
   const mal = useMalList(site.myanimelist.username, { limit: site.myanimelist.limit })
   const views = useViews()
 
+  useEffect(() => {
+    if (!entered) return undefined
+    const timer = window.setTimeout(prefetchCastoriceScene, 3000)
+    return () => window.clearTimeout(timer)
+  }, [entered])
+
+  useEffect(() => {
+    if (!entered || tutorialDone || revealed > 0) return undefined
+    const timer = window.setTimeout(() => setRevealed(1), 700)
+    return () => window.clearTimeout(timer)
+  }, [entered, tutorialDone, revealed])
+
+  const finishTutorial = useCallback(() => {
+    setRevealed(TUTORIAL_ORDER.length)
+    setTutorialDone(true)
+    try {
+      window.localStorage.setItem(TUTORIAL_KEY, '1')
+    } catch {
+      // Private mode: the tutorial simply shows again next time.
+    }
+  }, [])
+
+  const replayTutorial = useCallback(() => {
+    setTutorialDone(false)
+    setRevealed(0)
+    try {
+      window.localStorage.removeItem(TUTORIAL_KEY)
+    } catch {
+      // Nothing to clear.
+    }
+  }, [])
+
+  const nextTutorial = useCallback(() => {
+    if (revealed >= TUTORIAL_ORDER.length) {
+      finishTutorial()
+      return
+    }
+    const next = revealed + 1
+    setRevealed(next)
+    setTab(TUTORIAL_ORDER[next - 1])
+  }, [revealed, finishTutorial])
+
+  const lockClass = (id) => (revealed > REVEAL_INDEX[id] ? '' : ' is-locked')
+
+  // The Castorice archive is linkable: `#castorice` opens it directly and the
+  // browser back button closes it, so it behaves like a page inside the HUD.
+  const openCastorice = useCallback(() => {
+    setCastoriceOpen(true)
+    if (window.location.hash !== '#castorice') {
+      window.location.hash = 'castorice'
+    }
+  }, [])
+
+  const closeCastorice = useCallback(() => {
+    setCastoriceOpen(false)
+    if (window.location.hash === '#castorice') {
+      window.history.replaceState(null, '', window.location.pathname + window.location.search)
+    }
+  }, [])
+
+  useEffect(() => {
+    const sync = () => setCastoriceOpen(window.location.hash === '#castorice')
+    window.addEventListener('hashchange', sync)
+    window.addEventListener('popstate', sync)
+    return () => {
+      window.removeEventListener('hashchange', sync)
+      window.removeEventListener('popstate', sync)
+    }
+  }, [])
+
   return (
     <motion.div
       className="relative z-10 flex h-[100dvh] w-full flex-col overflow-hidden"
@@ -161,26 +270,32 @@ export default function World({ entered }) {
       inert={!entered ? true : undefined}
       aria-hidden={!entered}
     >
-      <HudHeader presence={presence} onContact={() => setContactOpen(true)} views={views} />
+      <HudHeader
+        presence={presence}
+        onContact={() => setContactOpen(true)}
+        onCastorice={openCastorice}
+        views={views}
+      />
 
       <main
         key={`${entered ? 'in' : 'out'}-${tab}`}
-        className="relative z-10 mx-auto flex min-h-0 w-full max-w-[1800px] flex-1 flex-col gap-2 px-2.5 py-2.5 xl:grid xl:grid-cols-[300px_minmax(0,1fr)_330px] xl:grid-rows-[minmax(0,1.16fr)_minmax(0,0.84fr)] xl:gap-3 xl:px-4 xl:py-3 2xl:grid-cols-[320px_minmax(0,1fr)_350px]"
+        className="relative z-10 mx-auto flex min-h-0 w-full max-w-[1000px] flex-1 flex-col gap-2 px-2.5 py-2.5 xl:grid xl:max-w-[1800px] xl:grid-cols-[300px_minmax(0,1fr)_330px] xl:grid-rows-[minmax(0,1.16fr)_minmax(0,0.84fr)] xl:gap-3 xl:px-4 xl:py-3 2xl:grid-cols-[320px_minmax(0,1fr)_350px]"
       >
         <Tilt
-          className={`${tab === 'profile' ? 'flex' : 'hidden'} hud-rise min-h-0 flex-1 xl:col-start-1 xl:row-span-2 xl:flex`}
+          className={`hud-lockable${lockClass('profile')} ${tab === 'profile' ? 'flex' : 'hidden'} hud-rise min-h-0 flex-1 xl:col-start-1 xl:row-span-2 xl:flex`}
           style={{ animationDelay: '0.16s' }}
         >
           <ProfilePanel
             presence={presence}
             onContact={() => setContactOpen(true)}
+            onReplayTutorial={replayTutorial}
             views={views}
             className="h-full w-full"
           />
         </Tilt>
 
         <Tilt
-          className={`${tab === 'activity' ? 'flex' : 'hidden'} hud-rise min-h-0 flex-1 xl:col-start-2 xl:row-start-1 xl:flex`}
+          className={`hud-lockable${lockClass('activity')} ${tab === 'activity' ? 'flex' : 'hidden'} hud-rise min-h-0 flex-1 xl:col-start-2 xl:row-start-1 xl:flex`}
           style={{ animationDelay: '0.24s' }}
         >
           <ActivityPanel
@@ -197,7 +312,7 @@ export default function World({ entered }) {
         </Tilt>
 
         <Tilt
-          className={`${tab === 'github' ? 'flex' : 'hidden'} hud-rise min-h-0 flex-1 xl:col-start-3 xl:row-span-2 xl:flex`}
+          className={`hud-lockable${lockClass('github')} ${tab === 'github' ? 'flex' : 'hidden'} hud-rise min-h-0 flex-1 xl:col-start-3 xl:row-span-2 xl:flex`}
           style={{ animationDelay: '0.32s' }}
         >
           <GithubPanel
@@ -211,7 +326,7 @@ export default function World({ entered }) {
         </Tilt>
 
         <Tilt
-          className={`${tab === 'anime' ? 'flex' : 'hidden'} hud-rise min-h-0 flex-1 xl:col-start-2 xl:row-start-2 xl:flex`}
+          className={`hud-lockable${lockClass('anime')} ${tab === 'anime' ? 'flex' : 'hidden'} hud-rise min-h-0 flex-1 xl:col-start-2 xl:row-start-2 xl:flex`}
           style={{ animationDelay: '0.4s' }}
         >
           <AnimePanel
@@ -228,8 +343,19 @@ export default function World({ entered }) {
 
       <MobileTabs tab={tab} setTab={setTab} hasMusic={Boolean(nowPlaying)} />
 
+      <Tutorial
+        revealed={revealed}
+        active={entered && !tutorialDone && revealed > 0}
+        onNext={nextTutorial}
+        onSkip={finishTutorial}
+      />
+
       <AnimatePresence>
         {contactOpen ? <ContactModal onClose={() => setContactOpen(false)} /> : null}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {castoriceOpen ? <CastoriceViewer onClose={closeCastorice} /> : null}
       </AnimatePresence>
 
       <AnimatePresence>

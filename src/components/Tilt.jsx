@@ -37,11 +37,10 @@ export default function Tilt({
 
     const apply = () => {
       frameRef.current = 0
-      if (document.documentElement.classList.contains('perf-lite')) {
-        reset()
-        return
-      }
 
+      // The tilt is a single rAF-throttled transform, so it stays enabled even
+      // in `perf-lite`. Only the sheen (hidden by CSS there) is dropped, which
+      // keeps the mouse-mirror feel on older laptops.
       const { x, y, active } = stateRef.current
       if (!active) {
         reset()

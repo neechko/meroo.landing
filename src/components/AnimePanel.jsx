@@ -104,7 +104,7 @@ export default function AnimePanel({
         }
       />
 
-      <div className="hud-scroll-x relative z-[2] flex min-h-0 flex-1 items-center gap-2 overflow-x-auto px-3 py-2.5">
+      <div className="anime-track hud-scroll-x relative z-[2] flex min-h-0 flex-1 gap-2 overflow-x-auto px-3 py-2.5">
         {status === 'loading' && !list.length ? <AnimeSkeleton /> : null}
 
         {list.map((entry, index) => (
@@ -114,7 +114,7 @@ export default function AnimePanel({
             target="_blank"
             rel="noreferrer"
             style={{ animationDelay: `${Math.min(index, 7) * 55}ms` }}
-            className="card-zoom group w-[78px] shrink-0 transition-transform duration-300 hover:scale-[1.04] xl:w-[88px]"
+            className="anime-card card-zoom group shrink-0 transition-transform duration-300 hover:scale-[1.04]"
             title={`${entry.title} — ${entry.watched}${entry.total ? `/${entry.total}` : ''} episodes`}
           >
             <Cover entry={entry} />
