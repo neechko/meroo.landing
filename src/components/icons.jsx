@@ -1,3 +1,107 @@
+/**
+ * A soft four-point sparkle with a small companion glint. Drawn as curves
+ * instead of the usual Lucide star so it reads as light rather than a badge.
+ */
+export function SparkGlyph({ className = 'h-5 w-5', ...props }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true" {...props}>
+      <path d="M11.1 2.6c.36 3.98 1.73 6.16 3.9 7.4-2.17 1.24-3.54 3.42-3.9 7.4-.36-3.98-1.73-6.16-3.9-7.4 2.17-1.24 3.54-3.42 3.9-7.4Z" />
+      <path
+        d="M18.6 13.2c.2 2.2.96 3.4 2.16 4.08-1.2.68-1.96 1.88-2.16 4.08-.2-2.2-.96-3.4-2.16-4.08 1.2-.68 1.96-1.88 2.16-4.08Z"
+        opacity="0.68"
+      />
+    </svg>
+  )
+}
+
+/**
+ * Castorice's butterfly: four curved wings, a slim body and antennae.
+ * Used anywhere the archive needs its own mark instead of a generic star.
+ */
+export function CastoriceGlyph({ className = 'h-5 w-5', ...props }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true" {...props}>
+      <path d="M11.6 11.6C9.7 7.1 5.9 4.8 3.9 6.2 2.1 7.5 2.9 11 5.7 12.4c1.5.8 3.5.7 5.9-.8Z" />
+      <path d="M11.6 12.8C9.4 14 7.6 16.4 8.6 18.2c.9 1.6 3.2 1.3 4.2-.4.7-1.2.9-3 .8-5Z" opacity="0.82" />
+      <path d="M12.4 11.6c1.9-4.5 5.7-6.8 7.7-5.4 1.8 1.3 1 4.8-1.8 6.2-1.5.8-3.5.7-5.9-.8Z" />
+      <path d="M12.4 12.8c2.2 1.2 4 3.6 3 5.4-.9 1.6-3.2 1.3-4.2-.4-.7-1.2-.9-3-.8-5Z" opacity="0.82" />
+      <path d="M12 10.4c.72 0 1.14.66 1.14 1.72 0 1.5-.3 3.46-.72 4.96h-.84c-.42-1.5-.72-3.46-.72-4.96 0-1.06.42-1.72 1.14-1.72Z" />
+      <path
+        d="M11.34 10.2C10.4 8.94 9.28 8.3 8.04 8.18M12.66 10.2c.94-1.26 2.06-1.9 3.3-2.02"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.15"
+        strokeLinecap="round"
+      />
+    </svg>
+  )
+}
+
+/**
+ * A portal ring with two crossing orbits and a spark in the middle.
+ */
+export function PortalGlyph({ className = 'h-5 w-5', ...props }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true" {...props}>
+      <circle
+        cx="12"
+        cy="12"
+        r="9"
+        stroke="currentColor"
+        strokeWidth="1.1"
+        strokeDasharray="1.6 4.4"
+        opacity="0.45"
+      />
+      <ellipse
+        cx="12"
+        cy="12"
+        rx="6.1"
+        ry="8.5"
+        transform="rotate(38 12 12)"
+        stroke="currentColor"
+        strokeWidth="1.15"
+        opacity="0.7"
+      />
+      <ellipse
+        cx="12"
+        cy="12"
+        rx="6.1"
+        ry="8.5"
+        transform="rotate(-38 12 12)"
+        stroke="currentColor"
+        strokeWidth="1.15"
+        opacity="0.4"
+      />
+      <path
+        d="M12 7.5c.35 2.16 1.09 3.16 2.9 3.65-1.81.49-2.55 1.49-2.9 3.65-.35-2.16-1.09-3.16-2.9-3.65 1.81-.49 2.55-1.49 2.9-3.65Z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
+
+/**
+ * A play triangle inside a soft orbit. Reads as "play this here" without
+ * looking like the default media glyph.
+ */
+export function PlayGlyph({ className = 'h-5 w-5', ...props }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true" {...props}>
+      <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.15" opacity="0.28" />
+      <path
+        d="M12 3.2a8.8 8.8 0 0 1 7.6 4.4"
+        stroke="currentColor"
+        strokeWidth="1.4"
+        strokeLinecap="round"
+      />
+      <path
+        d="M10.15 8.55c0-.79.86-1.28 1.55-.88l4.65 2.93c.66.42.66 1.38 0 1.8l-4.65 2.93c-.69.4-1.55-.09-1.55-.88V8.55Z"
+        fill="currentColor"
+      />
+    </svg>
+  )
+}
+
 export function DiscordIcon({ className = 'h-5 w-5', ...props }) {
   return (
     <svg viewBox="0 0 24 24" fill="currentColor" className={className} aria-hidden="true" {...props}>

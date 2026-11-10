@@ -1,0 +1,11 @@
+Model Information:
+* title:	Castorice
+* source:	https://sketchfab.com/3d-models/castorice-206928135bbf4fdea8fa7e6ad80bd084
+* author:	frey (https://sketchfab.com/layfray)
+
+Model License:
+* license type:	CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)
+* requirements:	Author must be credited. Commercial use is allowed.
+
+If you use this 3D model in your project be sure to copy paste this credit wherever you share it:
+This work is based on "Castorice" (https://sketchfab.com/3d-models/castorice-206928135bbf4fdea8fa7e6ad80bd084) by frey (https://sketchfab.com/layfray) licensed under CC-BY-4.0 (http://creativecommons.org/licenses/by/4.0/)

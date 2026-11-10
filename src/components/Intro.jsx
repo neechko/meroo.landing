@@ -1,8 +1,9 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, Sparkles } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { site } from '../config'
 import { usePointerParallax } from '../lib/usePointerParallax'
+import { PortalGlyph } from './icons'
 
 const WORDS = [
   {
@@ -208,18 +209,8 @@ export default function Intro({ onEnter }) {
           </div>
 
           <div className="intro-copy flex flex-1 flex-col items-center justify-center px-6">
-            <motion.div
-              initial={reduced ? false : { opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
-              className="flex items-center gap-2 rounded-full border border-violet-400/25 bg-violet-500/10 px-3.5 py-1.5 font-mono text-[9px] font-semibold uppercase tracking-[0.24em] text-violet-200"
-            >
-              <Sparkles className="h-3 w-3" />
-              sector 07 · player one
-            </motion.div>
-
             <div
-              className={`intro-word-wrap relative mt-4 flex h-[clamp(6.25rem,21vh,10rem)] w-full items-center justify-center ${
+              className={`intro-word-wrap relative flex h-[clamp(6.25rem,21vh,10rem)] w-full items-center justify-center ${
                 phase === 'dormant' ? 'is-dim' : ''
               }`}
             >
@@ -263,7 +254,7 @@ export default function Intro({ onEnter }) {
               </AnimatePresence>
             </div>
 
-            <div className="relative flex min-h-[10.5rem] w-full max-w-md flex-col items-center justify-start text-center">
+            <div className="relative mt-2 flex min-h-[10.5rem] w-full max-w-md flex-col items-center justify-start text-center">
               <AnimatePresence mode="wait">
                 {phase === 'dormant' ? (
                   <motion.div
@@ -284,7 +275,7 @@ export default function Intro({ onEnter }) {
                       aria-label="Open the portal and connect to the world"
                     >
                       <span className="intro-prompt-core">
-                        <Sparkles className="h-5 w-5" />
+                        <PortalGlyph className="h-5 w-5" />
                       </span>
                       <span className="font-display text-[15px] font-semibold tracking-tight text-zinc-100">
                         open the portal

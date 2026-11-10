@@ -1,5 +1,10 @@
 @import "tailwindcss";
 
+/* The 3D model lives in public/ and is fetched at runtime. Keep Tailwind's
+   content scanner away from it: the 1.8 MB glTF JSON is not a template and
+   makes automatic source detection balloon the build. */
+@source not "../public/castorice";
+
 @theme {
   --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
   --font-display: "Chakra Petch", "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -1044,7 +1049,9 @@ html.perf-lite .hud-panel {
 }
 html.perf-lite .hud-panel::after,
 html.perf-lite .noise,
-html.perf-lite .pointer-glow {
+html.perf-lite .pointer-glow,
+html.perf-lite .scene-sheen,
+html.perf-lite .intro-sheen {
   display: none;
 }
 html.perf-lite .aurora-blob {

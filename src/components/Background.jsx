@@ -1,12 +1,6 @@
 import { useEffect, useRef } from 'react'
+import { getGpuInfo, shouldUseLiteProfile } from '../lib/gpu'
 import { usePointerParallax } from '../lib/usePointerParallax'
-
-function lowPowerHint() {
-  if (typeof navigator === 'undefined') return false
-  const cores = navigator.hardwareConcurrency ?? 8
-  const memory = navigator.deviceMemory ?? 8
-  return cores <= 4 || memory <= 4
-}
 
 function Particles() {
   const canvasRef = useRef(null)
@@ -18,8 +12,13 @@ function Particles() {
 
     const root = document.documentElement
     const reduced = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches
-    const lite = lowPowerHint()
-    const dpr = Math.min(window.devicePixelRatio || 1, lite ? 1.25 : 1.75)
+    const info = getGpuInfo()
+    const lite = info.lite
+    const dpr = Math.min(
+      window.devicePixelRatio || 1,
+      lite ? 1.15 : info.tier === 'high' ? 1.75 : 1.4,
+    )
+    const frameBudget = info.tier === 'high' ? 16 : info.tier === 'medium' ? 24 : 30
     const mouse = { x: -9999, y: -9999 }
     let width = 0
     let height = 0
@@ -28,9 +27,10 @@ function Particles() {
     let lastDraw = 0
 
     const build = () => {
+      const maxCount = info.tier === 'high' ? 64 : info.tier === 'medium' ? 44 : 26
       const count = lite
-        ? 30
-        : Math.min(60, Math.max(24, Math.floor((width * height) / 42000)))
+        ? Math.min(maxCount, info.tier === 'low' ? 22 : 30)
+        : Math.min(maxCount, Math.max(24, Math.floor((width * height) / 42000)))
       particles = Array.from({ length: count }, () => ({
         x: Math.random() * width,
         y: Math.random() * height,
@@ -60,7 +60,7 @@ function Particles() {
       }
 
       const liteNow = lite || root.classList.contains('perf-lite')
-      if (!once && liteNow && time - lastDraw < 32) {
+      if (!once && info.tier !== 'high' && time - lastDraw < frameBudget) {
         raf = requestAnimationFrame(draw)
         return
       }
@@ -187,7 +187,9 @@ export default function Background() {
   // a slow HUD is still caught if the visitor waits before entering.
   useEffect(() => {
     const root = document.documentElement
-    if (lowPowerHint()) root.classList.add('perf-lite')
+    const info = getGpuInfo()
+    root.dataset.gpuTier = info.tier
+    if (shouldUseLiteProfile()) root.classList.add('perf-lite')
 
     let raf = 0
     let frames = 0

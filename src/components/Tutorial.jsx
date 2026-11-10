@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { ArrowRight, Compass, Sparkles } from 'lucide-react'
+import { ArrowRight, Compass } from 'lucide-react'
+import { SparkGlyph } from './icons'
 
 export const TUTORIAL_ORDER = ['activity', 'github', 'anime', 'profile']
 
@@ -87,7 +88,7 @@ export default function Tutorial({ revealed, active, onNext, onSkip }) {
             onClick={onNext}
             className="shine group flex w-full items-center justify-center gap-2 border-t border-white/[0.06] bg-gradient-to-r from-violet-600/80 via-indigo-600/70 to-cyan-600/60 px-3 py-2.5 font-mono text-[9.5px] font-semibold uppercase tracking-[0.12em] text-white transition hover:brightness-110"
           >
-            <Sparkles className="relative z-[2] h-3.5 w-3.5" />
+            <SparkGlyph className="relative z-[2] h-3.5 w-3.5" />
             <span className="relative z-[2]">
               {complete ? 'Enter the world' : `Reveal ${next?.title ?? 'next panel'}`}
             </span>

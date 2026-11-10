@@ -38,7 +38,6 @@ export const site = {
 
   // ── HERO / HUD ────────────────────────────────────────────────────
   hero: {
-    kicker: 'Player one · sector 07',
     subline: 'Discord bots, half-finished ideas, and a frontend I am still learning.',
     tagline:
       'Aspiring backend developer from Indonesia. I build Discord bots with Node.js, connect APIs, and break the frontend until it looks right.',

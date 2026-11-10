@@ -1,14 +1,17 @@
 import * as THREE from 'three'
+import { getGpuInfo } from './gpu'
 
 /**
  * A real WebGL scene for the Castorice archive.
  *
- * The figure is built from geometry rather than a flat image: a lathe-turned
- * gown, a small bust, hair strands, butterfly wings and drifting memory motes.
- * It idles, breathes, turns toward the pointer and can be dragged. If a
- * `public/castorice.glb` file exists it is loaded instead and its animations
- * are played, so a proper character model can be dropped in later without
- * touching this component.
+ * The primary asset is the actual Castorice model in `public/castorice`:
+ * the Sketchfab release by frey (CC-BY-4.0). It is skinned, textured and
+ * ships with a library of single-frame facial poses plus a blink clip, which
+ * are used here for visual-novel expressions. The procedural figure below is
+ * only a fallback for when the model cannot be fetched, so the archive never
+ * opens on an empty stage.
+ *
+ * The figure idles, breathes, turns toward the pointer and can be dragged.
  */
 
 const VIOLET = 0x8b5cf6
@@ -17,6 +20,26 @@ const PINK = 0xf0abfc
 const HAIR = 0x241241
 const FABRIC = 0x2a1a55
 const SKIN = 0xf2e4ff
+
+const MODEL_URL = '/castorice/scene.gltf'
+const MODEL_HEIGHT = 2.05
+const BLINK_CLIP = 'Emo_Castorice_00_Ani_Blink'
+const EXPRESSION_CLIPS = {
+  neutral: 'Emo_Castorice_00_Ani_Default',
+  gentle: 'Emo_Castorice_00_Ani_PhotoGraph_Gentle',
+  shy: 'Emo_Castorice_00_Ani_PhotoGraph_Shy',
+  trouble: 'Emo_Castorice_00_Ani_PhotoGraph_Trouble',
+  surprise: 'Emo_Castorice_00_Ani_PhotoGraph_Surprise',
+}
+
+// The archive is decorative, not a benchmark. On a GT 720M or an integrated
+// laptop GPU the scene still runs, just with a lower internal resolution and
+// fewer secondary particles. `fps: 0` leaves the display's own refresh rate.
+const QUALITY = {
+  high: { dpr: 1.75, antialias: true, motes: 220, butterflies: 7, fps: 0 },
+  medium: { dpr: 1.25, antialias: false, motes: 120, butterflies: 4, fps: 40 },
+  low: { dpr: 1, antialias: false, motes: 64, butterflies: 3, fps: 30 },
+}
 
 function standard(color, options = {}) {
   return new THREE.MeshStandardMaterial({
@@ -306,11 +329,10 @@ function buildFigure() {
   veins(1)
   veins(-1)
 
-  return { root, head, wingGroup, leftWing, rightWing, hairButterfly }
+  return { root, head, wingGroup, leftWing, rightWing, hairButterfly, halo, crown }
 }
 
-function buildMotes() {
-  const count = 220
+function buildMotes(count = 220) {
   const positions = new Float32Array(count * 3)
   for (let index = 0; index < count; index += 1) {
     const angle = Math.random() * Math.PI * 2
@@ -368,13 +390,17 @@ function buildGround() {
 }
 
 export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
+  const gpu = getGpuInfo()
+  const quality = QUALITY[gpu.tier] ?? QUALITY.medium
+  canvas.dataset.gpuTier = gpu.tier
+
   const renderer = new THREE.WebGLRenderer({
     canvas,
-    antialias: true,
+    antialias: quality.antialias,
     alpha: true,
     powerPreference: 'high-performance',
   })
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75))
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, quality.dpr))
   renderer.outputColorSpace = THREE.SRGBColorSpace
   renderer.toneMapping = THREE.ACESFilmicToneMapping
   renderer.toneMappingExposure = 1.08
@@ -382,8 +408,11 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
   const scene = new THREE.Scene()
   scene.fog = new THREE.FogExp2(0x070411, 0.09)
 
+  // Framing switches to a portrait crop once the real model is in place.
+  let framing = { y: 1.4, z: 4.5, look: 1.2 }
+
   const camera = new THREE.PerspectiveCamera(34, 1, 0.1, 40)
-  camera.position.set(0, 1.4, 4.5)
+  camera.position.set(0, framing.y, framing.z)
 
   scene.add(new THREE.AmbientLight(0x7a63c8, 1.35))
 
@@ -410,12 +439,12 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
   const ground = buildGround()
   scene.add(ground)
 
-  const motes = buildMotes()
+  const motes = buildMotes(quality.motes)
   scene.add(motes)
 
   const butterflies = []
   const butterflyColors = [VIOLET, CYAN, PINK, 0xa78bfa, 0x7dd3fc]
-  for (let index = 0; index < 7; index += 1) {
+  for (let index = 0; index < quality.butterflies; index += 1) {
     const butterfly = makeButterfly(butterflyColors[index % butterflyColors.length])
     const radius = 0.55 + (index % 4) * 0.18
     butterfly.userData.orbit = {
@@ -430,7 +459,13 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
   }
 
   let disposed = false
-  let mixer = null
+  let modelMixer = null
+  let activeExpression = null
+  let blinkAction = null
+  let nextBlinkAt = 3
+  let pendingExpression = 'gentle'
+  const clipByName = new Map()
+  const expressionTimeouts = new Set()
 
   const state = {
     pointerX: 0,
@@ -445,6 +480,7 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
     moved: 0,
     lastX: 0,
     lastY: 0,
+    talkPulse: 0,
   }
 
   const resetPointer = () => {
@@ -492,7 +528,10 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
     if (!state.dragging) return
     state.dragging = false
     canvas.releasePointerCapture?.(event.pointerId)
-    if (state.moved < 7) onTalk?.()
+    if (state.moved < 7) {
+      state.talkPulse = 1
+      onTalk?.()
+    }
   }
 
   const onPointerLeave = () => {
@@ -517,61 +556,195 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
   resizeObserver.observe(canvas)
   measure()
 
-  // Optional drop-in model. A missing file is ignored quietly.
-  const tryLoadModel = async () => {
-    try {
-      const response = await fetch('/castorice.glb', { method: 'HEAD' })
-      if (!response.ok) return
-      const type = response.headers.get('content-type') || ''
-      if (!/gltf|octet-stream|model/i.test(type)) return
+  // ── Real model ──────────────────────────────────────────────────────
+  // The face poses in this asset are single-frame clips. Switching between
+  // them (and blinking on top) is what makes her read as alive instead of a
+  // statue. Nothing here plays all 97 clips at once.
+  const applyExpression = (mood, fade = 0.3) => {
+    if (!modelMixer) {
+      pendingExpression = mood
+      return
+    }
+    const clip = clipByName.get(EXPRESSION_CLIPS[mood] ?? EXPRESSION_CLIPS.gentle)
+    if (!clip) return
 
-      const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
-      const loader = new GLTFLoader()
-      loader.load(
-        '/castorice.glb',
-        (gltf) => {
-          if (disposed) return
-          const model = gltf.scene
-          const box = new THREE.Box3().setFromObject(model)
-          const size = box.getSize(new THREE.Vector3())
-          const center = box.getCenter(new THREE.Vector3())
-          const scale = 2.05 / Math.max(size.y, 0.001)
-          model.scale.setScalar(scale)
-          model.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale)
-          model.traverse((child) => {
-            if (child.isMesh) child.frustumCulled = false
-          })
-          character.add(model)
-          procedural.visible = false
+    const next = modelMixer.clipAction(clip)
+    if (next === activeExpression) return
 
-          if (gltf.animations?.length) {
-            mixer = new THREE.AnimationMixer(model)
-            gltf.animations.forEach((clip) => mixer.clipAction(clip).play())
-          }
-        },
-        undefined,
-        () => {
-          // The procedural figure stays in place when the file cannot be read.
-        },
-      )
-    } catch {
-      // No model, no problem.
+    next.reset()
+    next.setLoop(THREE.LoopOnce, 1)
+    next.clampWhenFinished = true
+    next.setEffectiveTimeScale(1)
+    next.setEffectiveWeight(1)
+    next.play()
+    if (fade > 0) next.fadeIn(fade)
+
+    const previous = activeExpression
+    activeExpression = next
+
+    if (previous) {
+      previous.fadeOut(fade)
+      if (fade > 0) {
+        const id = window.setTimeout(() => {
+          expressionTimeouts.delete(id)
+          if (previous !== activeExpression) previous.stop()
+        }, fade * 1000 + 80)
+        expressionTimeouts.add(id)
+      } else {
+        previous.stop()
+      }
     }
   }
-  tryLoadModel()
+
+  const triggerBlink = () => {
+    if (!modelMixer) return
+    const clip = clipByName.get(BLINK_CLIP)
+    if (!clip) return
+    blinkAction?.stop()
+    blinkAction = modelMixer.clipAction(clip)
+    blinkAction.reset()
+    blinkAction.setLoop(THREE.LoopOnce, 1)
+    blinkAction.clampWhenFinished = true
+    // Higher weight than the idle expression so the lids actually meet.
+    blinkAction.setEffectiveWeight(3)
+    blinkAction.play()
+  }
+
+  // Sketchfab exports the figure Z-up. After the root conversion it usually
+  // faces the camera, but eye bones are a reliable way to check instead of
+  // guessing. If the eyes point away, turn the whole model around.
+  const detectFacing = (model) => {
+    const head = model.getObjectByName('Head_M_074')
+    const eye = model.getObjectByName('eye_L_0163') ?? model.getObjectByName('eye_R_0175')
+    if (!head || !eye) return 0
+    const headPos = head.getWorldPosition(new THREE.Vector3())
+    const eyePos = eye.getWorldPosition(new THREE.Vector3())
+    return eyePos.z < headPos.z ? Math.PI : 0
+  }
+
+  const loadModel = async () => {
+    try {
+      const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
+      const loader = new GLTFLoader()
+      const gltf = await loader.loadAsync(MODEL_URL)
+      if (disposed) {
+        gltf.scene.traverse((child) => {
+          child.geometry?.dispose()
+          const materials = Array.isArray(child.material) ? child.material : [child.material]
+          materials.forEach((material) => material?.dispose())
+        })
+        return
+      }
+
+      const model = gltf.scene
+      const holder = new THREE.Group()
+      holder.add(model)
+      holder.rotation.y = detectFacing(model)
+      holder.updateMatrixWorld(true)
+
+      const box = new THREE.Box3().setFromObject(model)
+      const size = box.getSize(new THREE.Vector3())
+      const center = box.getCenter(new THREE.Vector3())
+      const scale = MODEL_HEIGHT / Math.max(size.y, 0.001)
+      holder.scale.setScalar(scale)
+      holder.position.set(-center.x * scale, -box.min.y * scale, -center.z * scale)
+
+      model.traverse((child) => {
+        if (!child.isMesh) return
+        child.frustumCulled = false
+        const materials = Array.isArray(child.material) ? child.material : [child.material]
+        materials.forEach((material) => {
+          if (!material) return
+          // The source is unlit toon art; keep its own colours instead of
+          // letting ACES tone mapping wash the character out.
+          material.toneMapped = false
+          if (/fire/i.test(material.name || '')) {
+            // Fire cards are painted on black. Additive blending hides the
+            // black and lets the flame glow over the dress.
+            material.transparent = true
+            material.blending = THREE.AdditiveBlending
+            material.depthWrite = false
+          } else if (/trans/i.test(material.name || '')) {
+            material.transparent = true
+            material.opacity = 0.55
+            material.depthWrite = false
+          }
+        })
+      })
+
+      character.add(holder)
+      procedural.visible = false
+      framing = { y: 1.52, z: 3.05, look: 1.44 }
+
+      modelMixer = new THREE.AnimationMixer(model)
+      gltf.animations.forEach((clip) => clipByName.set(clip.name, clip))
+      modelMixer.addEventListener('finished', (event) => {
+        if (event.action === blinkAction) {
+          blinkAction.stop()
+          blinkAction = null
+        }
+      })
+      applyExpression(pendingExpression, 0)
+      nextBlinkAt = 3 + Math.random() * 3
+
+      canvas.dataset.model = 'loaded'
+      canvas.castoriceDebug = {
+        model,
+        holder,
+        mixer: modelMixer,
+        camera,
+        character,
+        size: size.toArray(),
+        scale,
+        getExpression: () => activeExpression?._clip?.name ?? null,
+        isBlinking: () => Boolean(blinkAction),
+      }
+    } catch (error) {
+      canvas.dataset.model = 'failed'
+      console.warn('[castorice] real model unavailable, keeping fallback figure', error)
+    }
+  }
+  loadModel()
 
   const timer = new THREE.Timer()
   timer.connect(document)
 
+  const frameStep = quality.fps ? 1 / quality.fps : 0
+  let accumulator = 0
+
   const animate = () => {
     if (disposed) return
+    // rAF already pauses in a hidden tab; this also covers minimized windows
+    // and keeps the scene from burning GPU time behind the archive.
+    if (document.hidden) return
+
     timer.update()
-    const delta = timer.getDelta()
-    mixer?.update(delta)
+    const delta = Math.min(timer.getDelta(), 0.1)
+
+    if (frameStep) {
+      accumulator += delta
+      if (accumulator < frameStep) return
+      accumulator = Math.min(accumulator - frameStep, frameStep)
+    }
 
     const t = reduced ? 0 : timer.getElapsed()
+
+    if (modelMixer) {
+      if (t > nextBlinkAt) {
+        triggerBlink()
+        nextBlinkAt = t + 2.8 + Math.random() * 3.6
+      }
+      modelMixer.update(delta)
+      if (blinkAction && !blinkAction.isRunning()) {
+        blinkAction.stop()
+        blinkAction = null
+      }
+    }
+
     const pointerX = reduced ? 0 : state.pointerX
     const pointerY = reduced ? 0 : state.pointerY
+    state.talkPulse = Math.max(0, state.talkPulse - delta * 2.2)
+    const talk = reduced ? 0 : state.talkPulse
 
     state.targetX += (state.orbitX + pointerY * 0.06 - state.targetX) * 0.075
     state.targetY += (state.orbitY + pointerX * 0.24 - state.targetY) * 0.075
@@ -580,17 +753,25 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
     character.rotation.y = state.targetY
     character.position.y = reduced ? 0 : Math.sin(t * 1.05) * 0.014
 
-    figure.head.rotation.y = pointerX * 0.16 + Math.sin(t * 0.6) * 0.02
-    figure.head.rotation.x = -pointerY * 0.09 + Math.sin(t * 0.85) * 0.012
-    figure.head.rotation.z = Math.sin(t * 0.5) * 0.018
+    if (procedural.visible) {
+      figure.head.rotation.y = pointerX * 0.16 + Math.sin(t * 0.6) * 0.02
+      figure.head.rotation.x = -pointerY * 0.09 + Math.sin(t * 0.85) * 0.012 - talk * 0.09
+      figure.head.rotation.z = Math.sin(t * 0.5) * 0.018
 
-    const flap = reduced ? 0.42 : 0.42 + Math.sin(t * 2.1) * 0.13
-    figure.leftWing.rotation.y = flap
-    figure.rightWing.rotation.y = -flap
-    figure.wingGroup.rotation.z = reduced ? 0 : Math.sin(t * 0.7) * 0.035
+      const flap = reduced ? 0.42 : 0.42 + Math.sin(t * 2.1) * 0.13
+      figure.leftWing.rotation.y = flap
+      figure.rightWing.rotation.y = -flap
+      figure.wingGroup.rotation.z = reduced ? 0 : Math.sin(t * 0.7) * 0.035
 
-    figure.hairButterfly.rotation.z = -0.5 + (reduced ? 0 : Math.sin(t * 1.8) * 0.16)
-    figure.hairButterfly.rotation.y = reduced ? 0 : Math.sin(t * 1.1) * 0.25
+      figure.hairButterfly.rotation.z = -0.5 + (reduced ? 0 : Math.sin(t * 1.8) * 0.16) + talk * 0.32
+      figure.hairButterfly.rotation.y = reduced ? 0 : Math.sin(t * 1.1) * 0.25
+
+      // A quiet reaction when the visitor speaks: the halo blooms and the
+      // crown glints instead of the whole figure doing a cartoon bounce.
+      figure.halo.scale.setScalar(1 + talk * 0.24)
+      figure.halo.material.opacity = 0.42 + talk * 0.45
+      figure.crown.scale.setScalar(1 + talk * 0.6)
+    }
 
     butterflies.forEach((butterfly) => {
       const orbit = butterfly.userData.orbit
@@ -612,16 +793,17 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
     motes.material.opacity = reduced ? 0.7 : 0.62 + Math.sin(t * 0.8) * 0.14
     ground.rotation.y = reduced ? 0 : t * 0.02
 
-    camera.position.x += (pointerX * 0.12 - camera.position.x) * 0.05
-    camera.position.y += (1.4 - pointerY * 0.06 - camera.position.y) * 0.05
-    camera.lookAt(0, 1.2, 0)
+    camera.position.x += (pointerX * 0.1 - camera.position.x) * 0.05
+    camera.position.y += (framing.y - pointerY * 0.05 - camera.position.y) * 0.05
+    camera.position.z += (framing.z - camera.position.z) * 0.05
+    camera.lookAt(0, framing.look, 0)
 
     renderer.render(scene, camera)
   }
 
   renderer.setAnimationLoop(animate)
 
-  return () => {
+  const dispose = () => {
     disposed = true
     renderer.setAnimationLoop(null)
     timer.disconnect()
@@ -633,15 +815,26 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
     canvas.removeEventListener('pointerleave', onPointerLeave)
     window.removeEventListener('keydown', onKeyDown)
 
+    expressionTimeouts.forEach((id) => window.clearTimeout(id))
+    expressionTimeouts.clear()
+    delete canvas.castoriceDebug
+
     scene.traverse((child) => {
       if (child.geometry) child.geometry.dispose()
       if (child.material) {
         const materials = Array.isArray(child.material) ? child.material : [child.material]
-        materials.forEach((material) => material.dispose())
+        materials.forEach((material) => {
+          Object.values(material).forEach((value) => {
+            if (value && value.isTexture) value.dispose()
+          })
+          material.dispose()
+        })
       }
     })
-    mixer?.stopAllAction()
+    modelMixer?.stopAllAction()
     renderer.dispose()
     renderer.forceContextLoss?.()
   }
+
+  return { dispose, setExpression: applyExpression }
 }

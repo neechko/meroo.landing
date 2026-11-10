@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Activity, ListVideo, Mail, Sparkles, UserRound } from 'lucide-react'
+import { Activity, ListVideo, Mail, UserRound } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { discordProfileUrl, site } from '../config'
 import { statusMeta, localTime } from '../lib/format'
@@ -14,7 +14,7 @@ import AnimePanel from './AnimePanel'
 import CastoriceViewer from './CastoriceViewer'
 import ContactModal from './ContactModal'
 import GithubPanel from './GithubPanel'
-import { DiscordIcon, GithubIcon } from './icons'
+import { CastoriceGlyph, DiscordIcon, GithubIcon } from './icons'
 import MusicPlayer from './MusicPlayer'
 import ProfilePanel from './ProfilePanel'
 import Tilt from './Tilt'
@@ -58,7 +58,7 @@ function HudHeader({ presence, onContact, views, onCastorice }) {
             {site.name}
           </p>
           <p className="mt-1 truncate font-mono text-[8px] uppercase tracking-[0.24em] text-zinc-500">
-            player one · sector 07
+            personal archive
           </p>
         </div>
       </div>
@@ -112,7 +112,7 @@ function HudHeader({ presence, onContact, views, onCastorice }) {
           title="Open Castorice archive"
           className="shine group inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-300/35 bg-gradient-to-r from-violet-600/75 via-indigo-600/65 to-cyan-600/55 px-2.5 font-mono text-[9px] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_10px_30px_-14px_rgba(139,92,246,0.9)] transition hover:brightness-110 active:scale-95"
         >
-          <Sparkles className="relative z-[2] h-3.5 w-3.5" />
+          <CastoriceGlyph className="relative z-[2] h-3.5 w-3.5" />
           <span className="relative z-[2] hidden min-[360px]:inline">Castorice</span>
         </button>
         <button

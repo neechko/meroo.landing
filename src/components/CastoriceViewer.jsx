@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight, MessageCircle, MousePointer2, RotateCcw, Sparkles, X } from 'lucide-react'
+import { ArrowRight, MessageCircle, MousePointer2, RotateCcw, X } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { CastoriceGlyph, SparkGlyph } from './icons'
 
 const DIALOGUE = [
   'There you are. I was beginning to think the current had taken you.',
@@ -10,6 +11,9 @@ const DIALOGUE = [
   'I am not going anywhere. Not while you still have stories left to tell.',
   'Stay a little longer. I will keep watch until morning.',
 ]
+
+// One facial pose per line, so the expression follows the conversation.
+const MOODS = ['gentle', 'shy', 'gentle', 'trouble', 'shy', 'gentle']
 
 const STATS = [
   { label: 'Path', value: 'Remembrance' },
@@ -21,6 +25,8 @@ const STATS = [
 export default function CastoriceViewer({ onClose }) {
   const reduced = Boolean(useReducedMotion())
   const canvasRef = useRef(null)
+  const sceneRef = useRef(null)
+  const lineRef = useRef(0)
   const [line, setLine] = useState(0)
   const [typed, setTyped] = useState(() => (reduced ? DIALOGUE[0] : ''))
   const [typing, setTyping] = useState(() => !reduced)
@@ -72,15 +78,17 @@ export default function CastoriceViewer({ onClose }) {
     if (!canvas) return undefined
 
     let cancelled = false
-    let disposeScene
+    let scene
 
     import('../lib/castoriceScene')
       .then(({ createCastoriceScene }) => {
         if (cancelled) return
-        disposeScene = createCastoriceScene(canvas, {
+        scene = createCastoriceScene(canvas, {
           reduced,
           onTalk: () => talkRef.current(),
         })
+        sceneRef.current = scene
+        scene.setExpression(MOODS[lineRef.current])
         setSceneReady(true)
       })
       .catch(() => {
@@ -89,9 +97,17 @@ export default function CastoriceViewer({ onClose }) {
 
     return () => {
       cancelled = true
-      disposeScene?.()
+      if (sceneRef.current === scene) sceneRef.current = null
+      scene?.dispose()
     }
   }, [reduced])
+
+  // The expression is part of the performance, not just decoration: each
+  // line gets the pose that matches what she is saying.
+  useEffect(() => {
+    lineRef.current = line
+    sceneRef.current?.setExpression(MOODS[line])
+  }, [line])
 
   useEffect(() => {
     const onKey = (event) => {
@@ -156,7 +172,7 @@ export default function CastoriceViewer({ onClose }) {
           {!sceneReady && !sceneError ? (
             <div className="pointer-events-none absolute inset-0 grid place-items-center">
               <div className="flex flex-col items-center gap-2 text-center">
-                <Sparkles className="h-5 w-5 animate-pulse text-violet-300" />
+                <CastoriceGlyph className="h-6 w-6 animate-pulse text-violet-300" />
                 <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-zinc-500">
                   opening the archive…
                 </p>
@@ -174,7 +190,7 @@ export default function CastoriceViewer({ onClose }) {
 
           <div className="pointer-events-none absolute inset-x-0 top-0 flex items-center justify-between gap-2 p-3">
             <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/25 bg-cyan-300/[0.07] px-2.5 py-1 font-mono text-[8px] uppercase tracking-[0.16em] text-cyan-200">
-              <Sparkles className="h-3 w-3" />
+              <SparkGlyph className="h-3 w-3" />
               3D · live
             </span>
             <span className="mr-9 hidden items-center gap-1.5 rounded-full border border-white/10 bg-black/30 px-2.5 py-1 font-mono text-[8px] uppercase tracking-[0.16em] text-zinc-400 sm:inline-flex">
@@ -307,9 +323,41 @@ export default function CastoriceViewer({ onClose }) {
             Character sheet
           </a>
 
-          <p className="mt-auto pt-4 font-mono text-[8.5px] uppercase tracking-[0.16em] text-zinc-600">
-            drag to turn · arrow keys rotate · esc closes
-          </p>
+          <div className="mt-auto pt-4">
+            <p className="font-mono text-[7.5px] leading-relaxed tracking-[0.02em] text-zinc-600">
+              This work is based on{' '}
+              <a
+                href="https://sketchfab.com/3d-models/castorice-206928135bbf4fdea8fa7e6ad80bd084"
+                target="_blank"
+                rel="noreferrer"
+                className="text-zinc-500 underline decoration-white/20 underline-offset-2 transition hover:text-zinc-300"
+              >
+                “Castorice”
+              </a>{' '}
+              by{' '}
+              <a
+                href="https://sketchfab.com/layfray"
+                target="_blank"
+                rel="noreferrer"
+                className="text-zinc-500 underline decoration-white/20 underline-offset-2 transition hover:text-zinc-300"
+              >
+                frey
+              </a>
+              , licensed under{' '}
+              <a
+                href="https://creativecommons.org/licenses/by/4.0/"
+                target="_blank"
+                rel="noreferrer"
+                className="text-zinc-500 underline decoration-white/20 underline-offset-2 transition hover:text-zinc-300"
+              >
+                CC-BY-4.0
+              </a>
+              .
+            </p>
+            <p className="mt-3 font-mono text-[8.5px] uppercase tracking-[0.16em] text-zinc-600">
+              drag to turn · arrow keys rotate · esc closes
+            </p>
+          </div>
         </div>
       </motion.div>
     </motion.div>

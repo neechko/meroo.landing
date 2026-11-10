@@ -1,7 +1,8 @@
-import { Activity, ExternalLink, Headphones, Play, WifiOff } from 'lucide-react'
+import { Activity, ExternalLink, Headphones, WifiOff } from 'lucide-react'
 import { isCustomStatus, isMusicActivity, formatClock, timeAgo } from '../lib/format'
 import { useNow } from '../lib/hooks'
 import HudPanel, { PanelHead } from './HudPanel'
+import { PlayGlyph } from './icons'
 import { AlbumArt, ActivityRow, ClientStatus, CustomStatus } from './presence-parts'
 import { Equalizer, LiveBadge } from './ui'
 
@@ -70,9 +71,9 @@ function NowPlaying({ track, onPlay }) {
               onClick={onPlay}
               aria-label={`Play ${track.title} here`}
               title="Play here"
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-emerald-400/15 px-2.5 py-1.5 text-[10px] font-semibold text-emerald-200 ring-1 ring-emerald-400/30 transition hover:bg-emerald-400/25 active:scale-95"
+              className="group/play inline-flex items-center justify-center gap-1.5 rounded-lg border border-violet-300/30 bg-gradient-to-r from-violet-500/25 via-indigo-500/20 to-cyan-400/20 px-2.5 py-1.5 text-[10px] font-semibold text-violet-100 shadow-[0_8px_20px_-12px_rgba(139,92,246,0.95)] transition hover:border-cyan-300/45 hover:from-violet-500/35 hover:to-cyan-400/30 hover:text-white active:scale-95"
             >
-              <Play className="h-3 w-3 fill-current" />
+              <PlayGlyph className="h-3.5 w-3.5 text-cyan-200 transition group-hover/play:text-cyan-100" />
               Play here
             </button>
           ) : null}

@@ -44,9 +44,6 @@ export default function ProfilePanel({ presence, onContact, onReplayTutorial, vi
         <span className="absolute left-4 top-3 font-mono text-[8.5px] font-semibold uppercase tracking-[0.22em] text-violet-200/80">
           player card
         </span>
-        <span className="absolute right-4 top-3 font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-500">
-          07 · MR
-        </span>
       </div>
 
       {/* Kept outside the scroll area so the negative margin can overlap the
