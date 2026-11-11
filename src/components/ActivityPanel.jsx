@@ -32,7 +32,7 @@ function TrackProgress({ timestamps, className = '' }) {
 
 function NowPlaying({ track, onPlay }) {
   return (
-    <div className="card-zoom relative overflow-hidden rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.045] p-3 transition duration-300 hover:border-emerald-300/30">
+    <div className="activity-now card-zoom relative overflow-hidden rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.045] p-3 transition duration-300 hover:border-emerald-300/30">
       {track.art ? (
         <img
           src={track.art}
@@ -45,7 +45,7 @@ function NowPlaying({ track, onPlay }) {
         <AlbumArt
           src={track.art}
           alt={track.album || track.title}
-          className="h-[60px] w-[60px] shrink-0"
+          className="activity-now-art h-[60px] w-[60px] shrink-0"
           rounded="rounded-xl"
         />
         <div className="min-w-0 flex-1">
@@ -53,12 +53,12 @@ function NowPlaying({ track, onPlay }) {
             <Equalizer className="h-2.5" />
             {track.source}
           </span>
-          <p className="mt-1.5 truncate font-display text-[15px] font-semibold leading-tight text-white">
+          <p className="activity-now-title mt-1.5 truncate font-display text-[15px] font-semibold leading-tight text-white">
             {track.title}
           </p>
           <p className="truncate text-[11px] text-zinc-400">{track.artist || 'Unknown artist'}</p>
           {track.album ? (
-            <p className="truncate font-mono text-[8.5px] uppercase tracking-[0.12em] text-zinc-500">{track.album}</p>
+            <p className="activity-now-album truncate font-mono text-[8.5px] uppercase tracking-[0.12em] text-zinc-500">{track.album}</p>
           ) : null}
         </div>
 
@@ -139,7 +139,7 @@ export default function ActivityPanel({
         action={<LiveBadge isLive={isLive} isDemo={isDemo} />}
       />
 
-      <div className="hud-scroll relative z-[2] flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3.5">
+      <div className="activity-feed hud-scroll relative z-[2] flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3.5">
         {loading && !presence ? <ActivitySkeleton /> : null}
 
         {presence ? (

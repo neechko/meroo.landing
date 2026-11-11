@@ -1,7 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { Activity, ListVideo, Mail, UserRound } from 'lucide-react'
+import { Activity, ListVideo, Mail, UserRound, Volume2, VolumeX } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { discordProfileUrl, site } from '../config'
+import { useBgm } from '../lib/bgm'
 import { statusMeta, localTime } from '../lib/format'
 import { useGithubRepos } from '../lib/github'
 import { useNow } from '../lib/hooks'
@@ -9,6 +10,7 @@ import { useLanyard } from '../lib/lanyard'
 import { useMalList } from '../lib/mal'
 import { useViews } from '../lib/views'
 import { getNowPlaying } from '../lib/nowPlaying'
+import { TUTORIAL_ORDER } from '../lib/tutorial'
 import ActivityPanel from './ActivityPanel'
 import AnimePanel from './AnimePanel'
 import CastoriceViewer from './CastoriceViewer'
@@ -18,7 +20,7 @@ import { CastoriceGlyph, DiscordIcon, GithubIcon } from './icons'
 import MusicPlayer from './MusicPlayer'
 import ProfilePanel from './ProfilePanel'
 import Tilt from './Tilt'
-import Tutorial, { TUTORIAL_ORDER } from './Tutorial'
+import Tutorial from './Tutorial'
 import { StatusDot } from './ui'
 import ViewsPill from './ViewsPill'
 
@@ -45,6 +47,7 @@ function HudHeader({ presence, onContact, views, onCastorice }) {
   const now = useNow(30_000)
   const status = presence?.discord_status ?? 'offline'
   const meta = statusMeta(status)
+  const bgm = useBgm()
 
   return (
     <header className="hud-topbar relative z-20 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] bg-[#05030c]/50 px-3 backdrop-blur-xl sm:px-4">
@@ -103,6 +106,22 @@ function HudHeader({ presence, onContact, views, onCastorice }) {
             <DiscordIcon className="h-4 w-4" />
           </a>
         ) : null}
+        <button
+          type="button"
+          onClick={bgm.toggle}
+          aria-label={bgm.playing ? 'Pause background music' : 'Play background music'}
+          title={bgm.playing ? 'Pause background music' : 'Play background music'}
+          className={`relative grid h-8 w-8 place-items-center rounded-lg border transition ${
+            bgm.playing
+              ? 'border-violet-300/35 bg-violet-500/10 text-violet-200'
+              : 'border-white/[0.08] bg-white/[0.03] text-zinc-400 hover:border-violet-400/35 hover:text-violet-200'
+          }`}
+        >
+          {bgm.playing ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          {bgm.playing ? (
+            <span className="absolute right-1 top-1 h-1 w-1 rounded-full bg-cyan-300 shadow-[0_0_8px_2px_rgba(103,232,249,0.7)]" />
+          ) : null}
+        </button>
         <button
           type="button"
           onClick={onCastorice}
@@ -344,6 +363,7 @@ export default function World({ entered }) {
       <MobileTabs tab={tab} setTab={setTab} hasMusic={Boolean(nowPlaying)} />
 
       <Tutorial
+        key={revealed}
         revealed={revealed}
         active={entered && !tutorialDone && revealed > 0}
         onNext={nextTutorial}

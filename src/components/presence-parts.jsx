@@ -109,11 +109,14 @@ export function ActivityRow({ activity, dense = false }) {
 
   return (
     <div
-      className={`flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.025] transition-colors duration-300 hover:border-violet-400/25 hover:bg-white/[0.05] ${
-        dense ? 'px-3 py-2.5' : 'p-3'
+      className={`activity-row flex items-center gap-3 rounded-2xl border border-white/[0.06] bg-white/[0.025] transition-colors duration-300 hover:border-violet-400/25 hover:bg-white/[0.05] ${
+        dense ? 'activity-row-dense px-3 py-2.5' : 'p-3'
       }`}
     >
-      <ActivityArt activity={activity} className={dense ? 'h-10 w-10' : 'h-12 w-12'} />
+      <ActivityArt
+        activity={activity}
+        className={`activity-art ${dense ? 'h-10 w-10' : 'h-12 w-12'}`}
+      />
       <div className="min-w-0 flex-1">
         <p className="truncate text-[13px] font-semibold text-zinc-100">{activity.name}</p>
         {activity.details ? (

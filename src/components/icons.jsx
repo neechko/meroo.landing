@@ -38,49 +38,6 @@ export function CastoriceGlyph({ className = 'h-5 w-5', ...props }) {
 }
 
 /**
- * A portal ring with two crossing orbits and a spark in the middle.
- */
-export function PortalGlyph({ className = 'h-5 w-5', ...props }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="none" className={className} aria-hidden="true" {...props}>
-      <circle
-        cx="12"
-        cy="12"
-        r="9"
-        stroke="currentColor"
-        strokeWidth="1.1"
-        strokeDasharray="1.6 4.4"
-        opacity="0.45"
-      />
-      <ellipse
-        cx="12"
-        cy="12"
-        rx="6.1"
-        ry="8.5"
-        transform="rotate(38 12 12)"
-        stroke="currentColor"
-        strokeWidth="1.15"
-        opacity="0.7"
-      />
-      <ellipse
-        cx="12"
-        cy="12"
-        rx="6.1"
-        ry="8.5"
-        transform="rotate(-38 12 12)"
-        stroke="currentColor"
-        strokeWidth="1.15"
-        opacity="0.4"
-      />
-      <path
-        d="M12 7.5c.35 2.16 1.09 3.16 2.9 3.65-1.81.49-2.55 1.49-2.9 3.65-.35-2.16-1.09-3.16-2.9-3.65 1.81-.49 2.55-1.49 2.9-3.65Z"
-        fill="currentColor"
-      />
-    </svg>
-  )
-}
-
-/**
  * A play triangle inside a soft orbit. Reads as "play this here" without
  * looking like the default media glyph.
  */

@@ -2,8 +2,8 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { site } from '../config'
+import { startBgm } from '../lib/bgm'
 import { usePointerParallax } from '../lib/usePointerParallax'
-import { PortalGlyph } from './icons'
 
 const WORDS = [
   {
@@ -62,14 +62,19 @@ export default function Intro({ onEnter }) {
   // the smoothest option on older laptops; the parallax itself is the mirror.
   const bgRef = usePointerParallax({ x: 16, y: 12, scale: 1.07, sheen: false })
 
+  const finish = useCallback(() => {
+    startBgm()
+    onEnter()
+  }, [onEnter])
+
   const wake = useCallback(() => {
     if (warping || phase !== 'dormant') return
     if (reduced) {
-      onEnter()
+      finish()
       return
     }
     setPhase('waking')
-  }, [phase, warping, reduced, onEnter])
+  }, [phase, warping, reduced, finish])
 
   const enter = useCallback(() => {
     if (warping) return
@@ -78,12 +83,14 @@ export default function Intro({ onEnter }) {
       return
     }
     if (reduced) {
-      onEnter()
+      finish()
       return
     }
+    // The click itself unlocks audio; the delayed onEnter only swaps screens.
+    startBgm()
     setWarping(true)
-    timerRef.current = window.setTimeout(onEnter, 1050)
-  }, [warping, phase, wake, reduced, onEnter])
+    timerRef.current = window.setTimeout(finish, 1050)
+  }, [warping, phase, wake, reduced, finish])
 
   // Waking timeline: status lines, word flip, then the Enter CTA.
   useEffect(() => {
@@ -159,13 +166,6 @@ export default function Intro({ onEnter }) {
         </div>
         <div className="intro-sweep" aria-hidden="true" />
 
-        <div className="intro-frame pointer-events-none absolute inset-3 sm:inset-5" aria-hidden="true">
-          <span className="intro-corner tl" />
-          <span className="intro-corner tr" />
-          <span className="intro-corner bl" />
-          <span className="intro-corner br" />
-        </div>
-
         <div className="relative z-10 flex h-full flex-col">
           <div className="flex items-center justify-between px-5 pt-5 sm:px-8">
             <div className="flex items-center gap-2.5">
@@ -199,7 +199,7 @@ export default function Intro({ onEnter }) {
                 type="button"
                 onClick={(event) => {
                   event.stopPropagation()
-                  onEnter()
+                  finish()
                 }}
                 className="rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-400 transition hover:border-violet-300/30 hover:text-violet-200"
               >
@@ -214,10 +214,6 @@ export default function Intro({ onEnter }) {
                 phase === 'dormant' ? 'is-dim' : ''
               }`}
             >
-              <span
-                className={`intro-portal ${phase === 'dormant' ? 'is-on' : ''}`}
-                aria-hidden="true"
-              />
               <AnimatePresence>
                 <motion.div
                   key={word.id}
@@ -274,19 +270,8 @@ export default function Intro({ onEnter }) {
                       className="intro-prompt group"
                       aria-label="Open the portal and connect to the world"
                     >
-                      <span className="intro-prompt-core">
-                        <PortalGlyph className="h-5 w-5" />
-                      </span>
-                      <span className="font-display text-[15px] font-semibold tracking-tight text-zinc-100">
-                        open the portal
-                      </span>
-                      <span className="font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-500">
-                        click anywhere · press enter
-                      </span>
+                      <span className="intro-prompt-text">open the portal</span>
                     </button>
-                    <p className="mt-2 font-mono text-[8.5px] uppercase tracking-[0.18em] text-zinc-600">
-                      the gate is dormant · audio unlocks after you enter
-                    </p>
                   </motion.div>
                 ) : ready ? (
                   <motion.div
@@ -310,10 +295,10 @@ export default function Intro({ onEnter }) {
                       disabled={warping}
                       whileHover={reduced ? undefined : { scale: 1.03 }}
                       whileTap={reduced ? undefined : { scale: 0.97 }}
-                      className="shine group relative mt-4 inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-violet-600 via-indigo-600 to-cyan-500 px-7 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-[0_20px_60px_-18px_rgba(139,92,246,0.95)] ring-1 ring-white/20 transition-shadow hover:shadow-[0_24px_70px_-14px_rgba(103,232,249,0.75)] disabled:cursor-wait"
+                      className="shine group relative mt-4 inline-flex items-center gap-3 rounded-full border border-violet-300/35 bg-[linear-gradient(180deg,rgba(109,40,217,0.92),rgba(49,24,95,0.96)_55%,rgba(18,9,38,0.98))] px-7 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-violet-50 shadow-[0_20px_60px_-22px_rgba(139,92,246,0.95),inset_0_1px_0_rgba(255,255,255,0.14)] ring-1 ring-cyan-300/15 transition hover:border-cyan-300/45 hover:text-white hover:shadow-[0_24px_70px_-20px_rgba(103,232,249,0.45),inset_0_1px_0_rgba(255,255,255,0.2)] disabled:cursor-wait"
                     >
                       <span className="relative z-[2]">{warping ? 'entering…' : 'Enter world'}</span>
-                      <ArrowRight className="relative z-[2] h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" />
+                      <ArrowRight className="relative z-[2] h-4 w-4 text-cyan-200 transition-transform duration-300 group-hover:translate-x-1" />
                     </motion.button>
 
                     <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-600">

@@ -4,22 +4,18 @@ import { getGpuInfo } from './gpu'
 /**
  * A real WebGL scene for the Castorice archive.
  *
- * The primary asset is the actual Castorice model in `public/castorice`:
+ * The only character asset is the actual Castorice model in `public/castorice`:
  * the Sketchfab release by frey (CC-BY-4.0). It is skinned, textured and
  * ships with a library of single-frame facial poses plus a blink clip, which
- * are used here for visual-novel expressions. The procedural figure below is
- * only a fallback for when the model cannot be fetched, so the archive never
- * opens on an empty stage.
+ * are used here for visual-novel expressions. Motes, butterflies and the
+ * ground ring stay procedural, but the figure is always the real model.
  *
- * The figure idles, breathes, turns toward the pointer and can be dragged.
+ * The figure breathes, turns toward the pointer and can be dragged.
  */
 
 const VIOLET = 0x8b5cf6
 const CYAN = 0x67e8f9
 const PINK = 0xf0abfc
-const HAIR = 0x241241
-const FABRIC = 0x2a1a55
-const SKIN = 0xf2e4ff
 
 const MODEL_URL = '/castorice/scene.gltf'
 const MODEL_HEIGHT = 2.05
@@ -31,6 +27,36 @@ const EXPRESSION_CLIPS = {
   trouble: 'Emo_Castorice_00_Ani_PhotoGraph_Trouble',
   surprise: 'Emo_Castorice_00_Ani_PhotoGraph_Surprise',
 }
+
+const CLIP_MANIFEST_URL = '/castorice/clips/manifest.json'
+
+// The asset ships in a bind A-pose: all 97 clips animate face bones only, so
+// the arms never move on their own. This single static preset folds both hands
+// low in front of the waist — the calm, maid-like pose that reads best on her.
+// There is deliberately no sway or gesture switching: the body holds one pose
+// while only the head, breathing and face expressions keep her alive.
+// Angles are degrees around each bone's local axes, calibrated on the real
+// skeleton: +Y on the shoulder lowers the arm, +Z swings it forward, and +Y on
+// the elbow folds the forearm in.
+const BODY_POSES = {
+  rest: {},
+  idle: {
+    L: { shoulder: [0, 26, 0], elbow: [0, 68, 50], wrist: [0, 0, 0], curl: 34 },
+    R: { shoulder: [0, 26, 0], elbow: [0, 68, 50], wrist: [0, 0, 0], curl: 34 },
+  },
+}
+
+const BONE_CHAINS = {
+  L: { shoulder: 'Shoulder_L_0226', elbow: 'Elbow_L_0227', wrist: 'Wrist_L_0231' },
+  R: { shoulder: 'Shoulder_R_0249', elbow: 'Elbow_R_0250', wrist: 'Wrist_R_0252' },
+}
+
+const FINGER_RE = /^(Index|Middle|Pinky|Ring|Thumb)Finger([123])_([LR])_/
+// The outer knuckle moves most; the tip folds a little less so the hand reads
+// as a soft clasp instead of a claw.
+const FINGER_CURL = { 1: 0.9, 2: 1, 3: 0.75 }
+const POSE_BLEND = 6
+const DEG = Math.PI / 180
 
 // The archive is decorative, not a benchmark. On a GT 720M or an integrated
 // laptop GPU the scene still runs, just with a lower internal resolution and
@@ -94,244 +120,6 @@ function makeButterfly(accent) {
   return group
 }
 
-function buildFigure() {
-  const root = new THREE.Group()
-
-  // ── Gown ──────────────────────────────────────────────────────────
-  const profile = [
-    [0, 0],
-    [0.5, 0.015],
-    [0.47, 0.12],
-    [0.4, 0.38],
-    [0.33, 0.66],
-    [0.27, 0.9],
-    [0.235, 1.08],
-    [0.25, 1.18],
-    [0.225, 1.26],
-  ].map(([x, y]) => new THREE.Vector2(x, y))
-
-  const gown = new THREE.Mesh(
-    new THREE.LatheGeometry(profile, 72),
-    standard(FABRIC, {
-      emissive: 0x3b1a7a,
-      emissiveIntensity: 0.34,
-      metalness: 0.4,
-      roughness: 0.42,
-      side: THREE.DoubleSide,
-      transparent: true,
-      opacity: 0.96,
-    }),
-  )
-  root.add(gown)
-
-  const gownWire = new THREE.Mesh(
-    new THREE.LatheGeometry(profile, 48),
-    new THREE.MeshBasicMaterial({
-      color: VIOLET,
-      wireframe: true,
-      transparent: true,
-      opacity: 0.075,
-      depthWrite: false,
-    }),
-  )
-  gownWire.scale.setScalar(1.025)
-  root.add(gownWire)
-
-  // ── Torso and neck ────────────────────────────────────────────────
-  const torso = new THREE.Mesh(
-    new THREE.CapsuleGeometry(0.155, 0.18, 8, 20),
-    standard(0x321c63, { emissive: 0x4c1d95, emissiveIntensity: 0.24, roughness: 0.4 }),
-  )
-  torso.position.y = 1.38
-  torso.scale.z = 0.78
-  root.add(torso)
-
-  const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.07, 0.13, 16), standard(SKIN, { roughness: 0.62 }))
-  neck.position.y = 1.64
-  root.add(neck)
-
-  // ── Arms ──────────────────────────────────────────────────────────
-  const sleeve = standard(0x2d1858, { emissive: 0x4c1d95, emissiveIntensity: 0.2, roughness: 0.5 })
-  const skin = standard(SKIN, { roughness: 0.62 })
-
-  const arm = (side) => {
-    const upper = new THREE.Mesh(new THREE.CapsuleGeometry(0.043, 0.2, 4, 12), sleeve)
-    upper.position.set(side * 0.21, 1.38, 0.01)
-    upper.rotation.z = side * 0.2
-
-    const lower = new THREE.Mesh(new THREE.CapsuleGeometry(0.037, 0.19, 4, 12), sleeve)
-    lower.position.set(side * 0.25, 1.18, 0.06)
-    lower.rotation.z = side * 0.42
-    lower.rotation.x = -0.12
-
-    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.048, 16, 12), skin)
-    hand.position.set(side * 0.285, 1.03, 0.1)
-    hand.scale.set(0.82, 1.1, 0.7)
-
-    root.add(upper, lower, hand)
-    return hand
-  }
-
-  arm(-1)
-  const rightHand = arm(1)
-  rightHand.position.set(0.13, 1.12, 0.2)
-
-  // ── Head ──────────────────────────────────────────────────────────
-  const head = new THREE.Group()
-  head.position.set(0, 1.82, 0)
-  root.add(head)
-
-  const face = new THREE.Mesh(new THREE.SphereGeometry(0.18, 32, 24), skin)
-  face.scale.set(1, 1.07, 0.94)
-  head.add(face)
-
-  const hairCap = new THREE.Mesh(
-    new THREE.SphereGeometry(0.196, 32, 24),
-    standard(HAIR, { emissive: 0x3b1a7a, emissiveIntensity: 0.18, roughness: 0.55 }),
-  )
-  hairCap.position.set(0, 0.022, -0.05)
-  hairCap.scale.set(1.03, 1.06, 0.99)
-  head.add(hairCap)
-
-  const eyeMaterial = new THREE.MeshStandardMaterial({
-    color: 0x1a0d2e,
-    emissive: CYAN,
-    emissiveIntensity: 0.55,
-    roughness: 0.25,
-  })
-  const eye = (side) => {
-    const mesh = new THREE.Mesh(new THREE.SphereGeometry(0.021, 12, 10), eyeMaterial)
-    mesh.position.set(side * 0.062, 0.025, 0.166)
-    mesh.scale.set(1.2, 1.5, 0.42)
-    head.add(mesh)
-    const glint = new THREE.Mesh(new THREE.SphereGeometry(0.0055, 8, 6), glow(0xffffff, 0.9))
-    glint.position.set(side * 0.056, 0.034, 0.181)
-    head.add(glint)
-  }
-  eye(-1)
-  eye(1)
-
-  const mouth = new THREE.Mesh(
-    new THREE.BoxGeometry(0.042, 0.0035, 0.004),
-    new THREE.MeshBasicMaterial({ color: 0xb98ccf, transparent: true, opacity: 0.75 }),
-  )
-  mouth.position.set(0, -0.052, 0.169)
-  head.add(mouth)
-
-  // Long hair strands down the back and along the sides.
-  const hairMaterial = standard(HAIR, { emissive: 0x2c125c, emissiveIntensity: 0.16, roughness: 0.5 })
-  const strand = (points, radius = 0.032) => {
-    const curve = new THREE.CatmullRomCurve3(points.map(([x, y, z]) => new THREE.Vector3(x, y, z)))
-    const mesh = new THREE.Mesh(new THREE.TubeGeometry(curve, 24, radius, 6, false), hairMaterial)
-    head.add(mesh)
-  }
-  strand(
-    [
-      [-0.12, 0.1, -0.1],
-      [-0.19, -0.2, -0.16],
-      [-0.17, -0.48, -0.2],
-      [-0.1, -0.72, -0.22],
-    ],
-    0.036,
-  )
-  strand(
-    [
-      [0.12, 0.1, -0.1],
-      [0.19, -0.2, -0.16],
-      [0.17, -0.48, -0.2],
-      [0.1, -0.72, -0.22],
-    ],
-    0.036,
-  )
-  strand(
-    [
-      [0, 0.12, -0.11],
-      [0, -0.24, -0.2],
-      [0, -0.52, -0.24],
-      [0, -0.78, -0.25],
-    ],
-    0.034,
-  )
-  strand(
-    [
-      [-0.15, 0.02, 0.03],
-      [-0.2, -0.2, 0.04],
-      [-0.18, -0.42, 0.02],
-    ],
-    0.024,
-  )
-  strand(
-    [
-      [0.15, 0.02, 0.03],
-      [0.2, -0.2, 0.04],
-      [0.18, -0.42, 0.02],
-    ],
-    0.024,
-  )
-
-  // ── Halo and ornament ─────────────────────────────────────────────
-  const halo = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.0035, 8, 72), glow(CYAN, 0.42))
-  halo.rotation.x = Math.PI / 2
-  halo.position.y = 0.14
-  head.add(halo)
-
-  const crown = new THREE.Mesh(new THREE.OctahedronGeometry(0.028, 0), glow(PINK, 0.95))
-  crown.position.set(0, 0.2, 0.02)
-  head.add(crown)
-
-  const hairButterfly = makeButterfly(CYAN)
-  hairButterfly.scale.setScalar(1.7)
-  hairButterfly.position.set(-0.18, 0.12, 0.02)
-  hairButterfly.rotation.z = -0.5
-  head.add(hairButterfly)
-
-  // ── Wings ─────────────────────────────────────────────────────────
-  const wingGroup = new THREE.Group()
-  wingGroup.position.set(0, 1.45, -0.17)
-  root.add(wingGroup)
-
-  const outerWing = glow(VIOLET, 0.3)
-  const innerWing = glow(CYAN, 0.18)
-
-  const rightWing = new THREE.Group()
-  const rightOuter = makeWing(outerWing, 1.12)
-  rightOuter.rotation.y = -0.42
-  const rightInner = makeWing(innerWing, 0.82)
-  rightInner.rotation.y = -0.42
-  rightInner.position.z = 0.012
-  rightWing.add(rightOuter, rightInner)
-
-  const leftWing = new THREE.Group()
-  const leftOuter = makeWing(outerWing, 1.12)
-  leftOuter.scale.x = -1.12
-  leftOuter.rotation.y = 0.42
-  const leftInner = makeWing(innerWing, 0.82)
-  leftInner.scale.x = -0.82
-  leftInner.rotation.y = 0.42
-  leftInner.position.z = 0.012
-  leftWing.add(leftOuter, leftInner)
-
-  wingGroup.add(leftWing, rightWing)
-
-  // Thin veins so the wings read as wings, not flat cards.
-  const veinMaterial = new THREE.LineBasicMaterial({ color: CYAN, transparent: true, opacity: 0.25 })
-  const veins = (side) => {
-    const geometry = new THREE.BufferGeometry().setFromPoints([
-      new THREE.Vector3(0, 0, 0.02),
-      new THREE.Vector3(side * 0.7, 0.22, 0.02),
-      new THREE.Vector3(side * 0.45, -0.12, 0.02),
-      new THREE.Vector3(0, 0, 0.02),
-    ])
-    const line = new THREE.Line(geometry, veinMaterial)
-    line.rotation.y = side * 0.42
-    wingGroup.add(line)
-  }
-  veins(1)
-  veins(-1)
-
-  return { root, head, wingGroup, leftWing, rightWing, hairButterfly, halo, crown }
-}
-
 function buildMotes(count = 220) {
   const positions = new Float32Array(count * 3)
   for (let index = 0; index < count; index += 1) {
@@ -389,7 +177,10 @@ function buildGround() {
   return group
 }
 
-export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
+export function createCastoriceScene(
+  canvas,
+  { reduced = false, onTalk, onModelReady, onModelError } = {},
+) {
   const gpu = getGpuInfo()
   const quality = QUALITY[gpu.tier] ?? QUALITY.medium
   canvas.dataset.gpuTier = gpu.tier
@@ -431,11 +222,6 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
   const character = new THREE.Group()
   scene.add(character)
 
-  const procedural = new THREE.Group()
-  const figure = buildFigure()
-  procedural.add(figure.root)
-  character.add(procedural)
-
   const ground = buildGround()
   scene.add(ground)
 
@@ -464,6 +250,16 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
   let blinkAction = null
   let nextBlinkAt = 3
   let pendingExpression = 'gentle'
+  let idlePose = null
+  let poseRig = null
+  let poseName = 'idle'
+  let bodyAction = null
+  let bodyLoop = false
+  const bodyClips = new Map()
+  const clipTimeouts = new Set()
+  const poseEuler = new THREE.Euler()
+  const poseQuat = new THREE.Quaternion()
+  const poseTarget = new THREE.Quaternion()
   const clipByName = new Map()
   const expressionTimeouts = new Set()
 
@@ -610,6 +406,180 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
     blinkAction.play()
   }
 
+  // ── Body posing ─────────────────────────────────────────────────────
+  const capturePoseRig = (model) => {
+    const rig = { arms: { L: {}, R: {} }, fingers: [] }
+    for (const side of ['L', 'R']) {
+      for (const part of ['shoulder', 'elbow', 'wrist']) {
+        const bone = model.getObjectByName(BONE_CHAINS[side][part])
+        rig.arms[side][part] = bone ? { bone, rest: bone.quaternion.clone() } : null
+      }
+    }
+    model.traverse((child) => {
+      if (!child.isBone) return
+      const match = FINGER_RE.exec(child.name)
+      if (!match) return
+      rig.fingers.push({
+        bone: child,
+        rest: child.quaternion.clone(),
+        side: match[3],
+        scale: FINGER_CURL[Number(match[2])] ?? 1,
+      })
+    })
+    return rig
+  }
+
+  const aimBone = (entry, angles, blend) => {
+    if (!entry) return
+    const [x = 0, y = 0, z = 0] = angles ?? []
+    poseEuler.set(x * DEG, y * DEG, z * DEG, 'XYZ')
+    poseTarget.copy(entry.rest).multiply(poseQuat.setFromEuler(poseEuler))
+    entry.bone.quaternion.slerp(poseTarget, blend)
+  }
+
+  // Damped slerp toward the static pose preset. Because it starts from wherever
+  // the bone currently is, taking over from a finished external clip is smooth
+  // too. No sine drift is layered on: the arms hold the pose and only the head,
+  // breathing and expressions move.
+  const applyBodyPose = (delta) => {
+    if (!poseRig) return
+    const blend = 1 - Math.exp(-delta * POSE_BLEND)
+    const offsets = BODY_POSES[poseName] ?? {}
+
+    for (const side of ['L', 'R']) {
+      const cfg = offsets[side]
+      const arm = poseRig.arms[side]
+      if (!cfg) {
+        aimBone(arm.shoulder, null, blend)
+        aimBone(arm.elbow, null, blend)
+        aimBone(arm.wrist, null, blend)
+        continue
+      }
+      aimBone(arm.shoulder, cfg.shoulder, blend)
+      aimBone(arm.elbow, cfg.elbow, blend)
+      aimBone(arm.wrist, cfg.wrist, blend)
+    }
+
+    for (const finger of poseRig.fingers) {
+      const cfg = offsets[finger.side]
+      if (!cfg) {
+        aimBone(finger, null, blend)
+        continue
+      }
+      aimBone(finger, [0, cfg.curl * finger.scale, 0], blend)
+    }
+  }
+
+  const stopBodyClip = (fade = 0.35) => {
+    if (!bodyAction) return
+    const previous = bodyAction
+    bodyAction = null
+    bodyLoop = false
+    previous.fadeOut(fade)
+    const id = window.setTimeout(() => {
+      clipTimeouts.delete(id)
+      previous.stop()
+    }, fade * 1000 + 120)
+    clipTimeouts.add(id)
+    canvas.dataset.bodyClip = ''
+  }
+
+  const playClip = (name) => {
+    const entry = bodyClips.get(name)
+    if (!entry || !modelMixer) return false
+    if (bodyAction?.getClip() === entry.clip) {
+      bodyAction.reset().play()
+      return true
+    }
+    stopBodyClip(entry.fade)
+    const action = modelMixer.clipAction(entry.clip)
+    action.reset()
+    action.setLoop(entry.loop ? THREE.LoopRepeat : THREE.LoopOnce, entry.loop ? Infinity : 1)
+    action.clampWhenFinished = !entry.loop
+    action.setEffectiveTimeScale(1)
+    action.setEffectiveWeight(1)
+    action.fadeIn(entry.fade).play()
+    bodyAction = action
+    bodyLoop = Boolean(entry.loop)
+    canvas.dataset.bodyClip = name
+    return true
+  }
+
+  const setPose = (name = 'idle') => {
+    const next = BODY_POSES[name] ? name : 'idle'
+    const same = next === poseName
+    poseName = next
+    // An authored clip with the same name wins over the procedural preset.
+    // Dropping `idle.glb` into the clips folder upgrades the idle without
+    // touching this file. Re-selecting the same pose replays a finished clip
+    // but leaves a looping one alone.
+    if (bodyClips.has(next)) {
+      if (!same || !bodyAction) playClip(next)
+      return
+    }
+    if (same) return
+    stopBodyClip()
+  }
+
+  // Optional authored body animation. The manifest is empty by default, so
+  // this quietly does nothing until a clip is dropped in.
+  const loadBodyClips = async () => {
+    try {
+      const base = new URL(CLIP_MANIFEST_URL, window.location.href)
+      const response = await fetch(base, { cache: 'no-cache' })
+      if (!response.ok) {
+        canvas.dataset.bodyClips = 'none'
+        return
+      }
+      const manifest = await response.json()
+      const entries = Array.isArray(manifest?.clips) ? manifest.clips : []
+      if (!entries.length) {
+        canvas.dataset.bodyClips = 'none'
+        return
+      }
+
+      const { GLTFLoader } = await import('three/examples/jsm/loaders/GLTFLoader.js')
+      const loader = new GLTFLoader()
+      for (const entry of entries) {
+        if (!entry?.name || !entry?.file || disposed) continue
+        try {
+          const gltf = await loader.loadAsync(new URL(entry.file, base).href)
+          const clip = entry.clip
+            ? gltf.animations.find((candidate) => candidate.name === entry.clip)
+            : gltf.animations[0]
+          if (!clip) {
+            console.warn('[castorice] no animation in body clip', entry.file)
+            continue
+          }
+          // Only the keyframes are used; the rig comes from the archive model.
+          gltf.scene.traverse((child) => {
+            child.geometry?.dispose()
+            const materials = Array.isArray(child.material) ? child.material : [child.material]
+            materials.forEach((material) => {
+              if (!material) return
+              Object.values(material).forEach((value) => {
+                if (value?.isTexture) value.dispose()
+              })
+              material.dispose()
+            })
+          })
+          clipByName.set(entry.name, clip)
+          bodyClips.set(entry.name, {
+            clip,
+            loop: entry.loop !== false,
+            fade: Number.isFinite(entry.fade) ? entry.fade : 0.35,
+          })
+        } catch (error) {
+          console.warn('[castorice] body clip failed to load', entry.file, error)
+        }
+      }
+      canvas.dataset.bodyClips = String(bodyClips.size)
+      if (bodyClips.has(poseName)) playClip(poseName)
+    } catch {
+      canvas.dataset.bodyClips = 'none'
+    }
+  }
+
   // Sketchfab exports the figure Z-up. After the root conversion it usually
   // faces the camera, but eye bones are a reliable way to check instead of
   // guessing. If the eyes point away, turn the whole model around.
@@ -673,15 +643,33 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
       })
 
       character.add(holder)
-      procedural.visible = false
       framing = { y: 1.52, z: 3.05, look: 1.44 }
 
       modelMixer = new THREE.AnimationMixer(model)
       gltf.animations.forEach((clip) => clipByName.set(clip.name, clip))
+
+      // The expression clips only animate face bones, so a very small idle on
+      // the head/neck/spine can sit on top without fighting the performance.
+      const capture = (name) => {
+        const bone = model.getObjectByName(name)
+        return bone ? { bone, base: bone.rotation.clone() } : null
+      }
+      idlePose = {
+        head: capture('Head_M_074'),
+        neck: capture('Neck_M_073'),
+        spine: capture('Spine1_M_060'),
+      }
+      poseRig = capturePoseRig(model)
+      loadBodyClips()
+
       modelMixer.addEventListener('finished', (event) => {
         if (event.action === blinkAction) {
           blinkAction.stop()
           blinkAction = null
+        }
+        if (event.action === bodyAction && !bodyLoop) {
+          bodyAction = null
+          canvas.dataset.bodyClip = ''
         }
       })
       applyExpression(pendingExpression, 0)
@@ -698,10 +686,16 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
         scale,
         getExpression: () => activeExpression?._clip?.name ?? null,
         isBlinking: () => Boolean(blinkAction),
+        getPose: () => poseName,
+        setPose,
+        playClip,
+        getBodyClips: () => [...bodyClips.keys()],
       }
+      onModelReady?.()
     } catch (error) {
       canvas.dataset.model = 'failed'
-      console.warn('[castorice] real model unavailable, keeping fallback figure', error)
+      console.warn('[castorice] model failed to load', error)
+      onModelError?.(error)
     }
   }
   loadModel()
@@ -741,6 +735,10 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
       }
     }
 
+    // Authored body clips own the arm bones while they play; otherwise the
+    // procedural preset eases the arms into their gesture.
+    if (!bodyAction) applyBodyPose(delta)
+
     const pointerX = reduced ? 0 : state.pointerX
     const pointerY = reduced ? 0 : state.pointerY
     state.talkPulse = Math.max(0, state.talkPulse - delta * 2.2)
@@ -749,29 +747,29 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
     state.targetX += (state.orbitX + pointerY * 0.06 - state.targetX) * 0.075
     state.targetY += (state.orbitY + pointerX * 0.24 - state.targetY) * 0.075
 
+    // A quiet idle layered on top of the face poses: breathing through the
+    // spine and a slow turn of the head toward the pointer. The expression
+    // clips only touch face bones, so this does not fight them.
+    if (idlePose) {
+      const breathe = reduced ? 0 : Math.sin(t * 0.9) * 0.012
+      if (idlePose.spine) {
+        idlePose.spine.bone.rotation.x = idlePose.spine.base.x + breathe
+      }
+      if (idlePose.neck) {
+        idlePose.neck.bone.rotation.y =
+          idlePose.neck.base.y + (reduced ? 0 : Math.sin(t * 0.43) * 0.024) + pointerX * 0.035
+        idlePose.neck.bone.rotation.x =
+          idlePose.neck.base.x + (reduced ? 0 : Math.sin(t * 0.57) * 0.008) - pointerY * 0.015
+      }
+      if (idlePose.head) {
+        idlePose.head.bone.rotation.z =
+          idlePose.head.base.z + (reduced ? 0 : Math.sin(t * 0.31) * 0.012) + talk * 0.02
+      }
+    }
+
     character.rotation.x = state.targetX
     character.rotation.y = state.targetY
     character.position.y = reduced ? 0 : Math.sin(t * 1.05) * 0.014
-
-    if (procedural.visible) {
-      figure.head.rotation.y = pointerX * 0.16 + Math.sin(t * 0.6) * 0.02
-      figure.head.rotation.x = -pointerY * 0.09 + Math.sin(t * 0.85) * 0.012 - talk * 0.09
-      figure.head.rotation.z = Math.sin(t * 0.5) * 0.018
-
-      const flap = reduced ? 0.42 : 0.42 + Math.sin(t * 2.1) * 0.13
-      figure.leftWing.rotation.y = flap
-      figure.rightWing.rotation.y = -flap
-      figure.wingGroup.rotation.z = reduced ? 0 : Math.sin(t * 0.7) * 0.035
-
-      figure.hairButterfly.rotation.z = -0.5 + (reduced ? 0 : Math.sin(t * 1.8) * 0.16) + talk * 0.32
-      figure.hairButterfly.rotation.y = reduced ? 0 : Math.sin(t * 1.1) * 0.25
-
-      // A quiet reaction when the visitor speaks: the halo blooms and the
-      // crown glints instead of the whole figure doing a cartoon bounce.
-      figure.halo.scale.setScalar(1 + talk * 0.24)
-      figure.halo.material.opacity = 0.42 + talk * 0.45
-      figure.crown.scale.setScalar(1 + talk * 0.6)
-    }
 
     butterflies.forEach((butterfly) => {
       const orbit = butterfly.userData.orbit
@@ -817,6 +815,9 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
 
     expressionTimeouts.forEach((id) => window.clearTimeout(id))
     expressionTimeouts.clear()
+    clipTimeouts.forEach((id) => window.clearTimeout(id))
+    clipTimeouts.clear()
+    bodyClips.clear()
     delete canvas.castoriceDebug
 
     scene.traverse((child) => {
@@ -836,5 +837,11 @@ export function createCastoriceScene(canvas, { reduced = false, onTalk } = {}) {
     renderer.forceContextLoss?.()
   }
 
-  return { dispose, setExpression: applyExpression }
+  return {
+    dispose,
+    setExpression: applyExpression,
+    setPose,
+    playClip,
+    getPose: () => poseName,
+  }
 }

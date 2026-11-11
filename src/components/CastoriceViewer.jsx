@@ -86,10 +86,15 @@ export default function CastoriceViewer({ onClose }) {
         scene = createCastoriceScene(canvas, {
           reduced,
           onTalk: () => talkRef.current(),
+          onModelReady: () => {
+            if (!cancelled) setSceneReady(true)
+          },
+          onModelError: () => {
+            if (!cancelled) setSceneError(true)
+          },
         })
         sceneRef.current = scene
         scene.setExpression(MOODS[lineRef.current])
-        setSceneReady(true)
       })
       .catch(() => {
         if (!cancelled) setSceneError(true)
@@ -102,8 +107,8 @@ export default function CastoriceViewer({ onClose }) {
     }
   }, [reduced])
 
-  // The expression is part of the performance, not just decoration: each
-  // line gets the pose that matches what she is saying.
+  // Only the expression changes with the line. Her body stays in the same
+  // quiet idle the whole time — gestures read as stiff on a static portrait.
   useEffect(() => {
     lineRef.current = line
     sceneRef.current?.setExpression(MOODS[line])
@@ -183,7 +188,7 @@ export default function CastoriceViewer({ onClose }) {
           {sceneError ? (
             <div className="pointer-events-none absolute inset-0 grid place-items-center px-6">
               <p className="max-w-[18rem] text-center font-mono text-[9px] uppercase leading-relaxed tracking-[0.16em] text-zinc-500">
-                this browser could not start the 3D scene
+                the archive model could not be loaded
               </p>
             </div>
           ) : null}
