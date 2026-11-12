@@ -35,9 +35,9 @@ const WORDS = [
 
 const LINK_STEPS = [
   'discord presence',
-  'github archive',
-  'myanimelist log',
-  'archive geometry',
+  'github projects',
+  'myanimelist',
+  '3d figure',
 ]
 
 /**

@@ -67,15 +67,6 @@ const QUALITY = {
   low: { dpr: 1, antialias: false, motes: 64, butterflies: 3, fps: 30 },
 }
 
-function standard(color, options = {}) {
-  return new THREE.MeshStandardMaterial({
-    color,
-    roughness: 0.48,
-    metalness: 0.18,
-    ...options,
-  })
-}
-
 function glow(color, opacity = 0.7) {
   return new THREE.MeshBasicMaterial({
     color,
@@ -87,35 +78,139 @@ function glow(color, opacity = 0.7) {
   })
 }
 
-function wingShape() {
-  const shape = new THREE.Shape()
-  shape.moveTo(0, 0)
-  shape.bezierCurveTo(0.16, 0.34, 0.52, 0.54, 0.86, 0.34)
-  shape.bezierCurveTo(1.02, 0.2, 0.96, -0.14, 0.66, -0.26)
-  shape.bezierCurveTo(0.44, -0.34, 0.2, -0.2, 0, 0)
-  return shape
+// A wing texture drawn once per butterfly. The old flat ShapeGeometry read as
+// a glowing triangle: no shape, no shading, no veins. This draws a proper
+// two-lobed wing with a base-to-tip gradient, a bright rim, soft veins and a
+// little bloom, then maps it onto a plane that can actually flap.
+function makeWingTexture(accent) {
+  const size = 256
+  const canvas = document.createElement('canvas')
+  canvas.width = size
+  canvas.height = size
+  const ctx = canvas.getContext('2d')
+
+  const base = new THREE.Color(accent)
+  const light = base.clone().lerp(new THREE.Color(0xffffff), 0.62)
+  const deep = base.clone().multiplyScalar(0.42)
+  const rgb = (color) =>
+    `${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)}`
+
+  const wing = new Path2D()
+  wing.moveTo(12, 128)
+  wing.bezierCurveTo(52, 42, 168, 18, 236, 62)
+  wing.bezierCurveTo(252, 82, 234, 116, 180, 130)
+  wing.bezierCurveTo(226, 150, 240, 198, 198, 226)
+  wing.bezierCurveTo(146, 254, 52, 214, 12, 128)
+  wing.closePath()
+
+  // Soft outer bloom.
+  ctx.save()
+  ctx.shadowColor = `rgba(${rgb(base)}, 0.9)`
+  ctx.shadowBlur = 24
+  const fill = ctx.createLinearGradient(12, 150, 246, 108)
+  fill.addColorStop(0, `rgba(${rgb(deep)}, 0.98)`)
+  fill.addColorStop(0.34, `rgba(${rgb(base)}, 0.96)`)
+  fill.addColorStop(0.76, `rgba(${rgb(light)}, 0.92)`)
+  fill.addColorStop(1, 'rgba(255, 255, 255, 0.74)')
+  ctx.fillStyle = fill
+  ctx.fill(wing)
+  ctx.restore()
+
+  // Bright rim so the silhouette stays readable at small sizes.
+  ctx.save()
+  ctx.strokeStyle = `rgba(${rgb(light)}, 0.85)`
+  ctx.lineWidth = 3
+  ctx.shadowColor = `rgba(${rgb(base)}, 0.9)`
+  ctx.shadowBlur = 12
+  ctx.stroke(wing)
+  ctx.restore()
+
+  // Veins, kept faint so they add detail without noise.
+  ctx.save()
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.26)'
+  ctx.lineWidth = 1.3
+  for (let index = 0; index < 4; index += 1) {
+    const y = 92 + index * 30
+    ctx.beginPath()
+    ctx.moveTo(18, 128)
+    ctx.quadraticCurveTo(120, y - 4, 222, y + 8)
+    ctx.stroke()
+  }
+  ctx.restore()
+
+  // Light pooling at the wing base.
+  const inner = ctx.createRadialGradient(30, 128, 2, 30, 128, 92)
+  inner.addColorStop(0, 'rgba(255, 255, 255, 0.42)')
+  inner.addColorStop(1, 'rgba(255, 255, 255, 0)')
+  ctx.fillStyle = inner
+  ctx.fill(wing)
+
+  const texture = new THREE.CanvasTexture(canvas)
+  texture.colorSpace = THREE.SRGBColorSpace
+  texture.anisotropy = 4
+  return texture
 }
 
-function makeWing(material, scale = 1) {
-  const geometry = new THREE.ShapeGeometry(wingShape(), 24)
+function makeWing(accent) {
+  const geometry = new THREE.PlaneGeometry(1, 1)
+  // Move the pivot to the body so the wing grows out of the thorax instead of
+  // spinning around its own centre.
+  geometry.translate(0.5, 0, 0)
+  const material = new THREE.MeshBasicMaterial({
+    map: makeWingTexture(accent),
+    transparent: true,
+    opacity: 0.96,
+    depthWrite: false,
+    side: THREE.DoubleSide,
+    toneMapped: false,
+  })
   const mesh = new THREE.Mesh(geometry, material)
-  mesh.scale.setScalar(scale)
+  mesh.scale.setScalar(0.11)
   return mesh
 }
 
 function makeButterfly(accent) {
   const group = new THREE.Group()
-  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.012, 0.045, 4, 8), standard(0x1c1036, { roughness: 0.7 }))
-  body.rotation.x = Math.PI / 2
+  // Yaw first, then roll around the body's own axis — a natural bank.
+  group.rotation.order = 'YXZ'
+
+  const bodyMaterial = new THREE.MeshStandardMaterial({
+    color: 0x241340,
+    roughness: 0.55,
+    metalness: 0.2,
+    emissive: accent,
+    emissiveIntensity: 0.28,
+  })
+  const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.011, 0.05, 4, 8), bodyMaterial)
   group.add(body)
 
-  const material = glow(accent, 0.7)
-  const left = makeWing(material, 0.075)
-  left.scale.x = -0.075
-  left.rotation.y = 0.35
-  const right = makeWing(material, 0.075)
-  right.rotation.y = -0.35
-  group.add(left, right)
+  // Each wing hangs off its own pivot so the beat stays symmetric. The wings
+  // live in the XY plane and the whole butterfly turns to face the camera, so
+  // the silhouette is always readable instead of showing up edge-on.
+  const makeSide = (side) => {
+    const pivot = new THREE.Group()
+    pivot.scale.x = side
+    pivot.userData.side = side
+    pivot.add(makeWing(accent))
+    group.add(pivot)
+    return pivot
+  }
+  const left = makeSide(-1)
+  const right = makeSide(1)
+
+  const antennaMaterial = new THREE.LineBasicMaterial({
+    color: accent,
+    transparent: true,
+    opacity: 0.55,
+  })
+  ;[-1, 1].forEach((side) => {
+    const geometry = new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, 0.038, 0),
+      new THREE.Vector3(side * 0.028, 0.086, 0.006),
+    ])
+    group.add(new THREE.Line(geometry, antennaMaterial))
+  })
+
   group.userData.wings = [left, right]
   return group
 }
@@ -779,12 +874,20 @@ export function createCastoriceScene(
         orbit.baseY + Math.sin(t * 1.25 + orbit.phase) * 0.12,
         Math.sin(angle) * orbit.radius,
       )
-      butterfly.rotation.y = -angle + Math.PI / 2
-      butterfly.rotation.z = orbit.tilt + Math.sin(t * 2.4 + orbit.phase) * 0.18
-      const [left, right] = butterfly.userData.wings
-      const beat = reduced ? 0.35 : 0.35 + Math.sin(t * 5 + orbit.phase) * 0.3
-      left.rotation.y = beat
-      right.rotation.y = -beat
+      // The wings live in the XY plane, so the butterfly turns to face the
+      // camera. Without this it would show up edge-on and read as a sliver.
+      const yaw = Math.atan2(
+        camera.position.x - butterfly.position.x,
+        camera.position.z - butterfly.position.z,
+      )
+      butterfly.rotation.y = yaw + (reduced ? 0 : Math.sin(t * 0.9 + orbit.phase) * 0.22)
+      // Small bank into the orbit, kept subtle so the wings stay symmetrical.
+      butterfly.rotation.z = orbit.tilt * 0.35 + (reduced ? 0 : Math.sin(t * 2.4 + orbit.phase) * 0.1)
+
+      const flap = reduced ? 0.55 : 0.55 + Math.sin(t * 6.5 + orbit.phase) * 0.4
+      butterfly.userData.wings.forEach((pivot) => {
+        pivot.rotation.z = pivot.userData.side * flap
+      })
     })
 
     motes.rotation.y = reduced ? 0 : t * 0.035

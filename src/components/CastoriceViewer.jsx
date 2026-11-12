@@ -4,12 +4,12 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { CastoriceGlyph, SparkGlyph } from './icons'
 
 const DIALOGUE = [
-  'There you are. I was beginning to think the current had taken you.',
-  'You came back. I kept the light on, just in case.',
-  'The river remembers every name. Yours is one I keep close.',
-  'You carry a lot of noise in your head. Leave it at the shore for a while.',
-  'I am not going anywhere. Not while you still have stories left to tell.',
-  'Stay a little longer. I will keep watch until morning.',
+  'There you are. I was starting to wonder where you went.',
+  'You came back. I kept the light on for you.',
+  'Take your time. There is no rush here.',
+  'You look tired. Sit with me for a while.',
+  'I am not going anywhere. Tell me how your day went.',
+  'Stay a little longer. I will keep you company.',
 ]
 
 // One facial pose per line, so the expression follows the conversation.
@@ -19,7 +19,7 @@ const STATS = [
   { label: 'Path', value: 'Remembrance' },
   { label: 'Element', value: 'Quantum' },
   { label: 'Rarity', value: '5 star' },
-  { label: 'Domain', value: 'River of Souls' },
+  { label: 'Version', value: '3.2' },
 ]
 
 export default function CastoriceViewer({ onClose }) {
@@ -140,7 +140,7 @@ export default function CastoriceViewer({ onClose }) {
       <button
         type="button"
         tabIndex={-1}
-        aria-label="Close Castorice archive"
+        aria-label="Close Castorice"
         onClick={onClose}
         className="absolute inset-0 cursor-default bg-[#04030a]/85 backdrop-blur-md"
       />
@@ -179,7 +179,7 @@ export default function CastoriceViewer({ onClose }) {
               <div className="flex flex-col items-center gap-2 text-center">
                 <CastoriceGlyph className="h-6 w-6 animate-pulse text-violet-300" />
                 <p className="font-mono text-[9px] uppercase tracking-[0.22em] text-zinc-500">
-                  opening the archive…
+                  loading the 3d model…
                 </p>
               </div>
             </div>
@@ -225,9 +225,6 @@ export default function CastoriceViewer({ onClose }) {
                   <p className="font-display text-[13px] font-semibold tracking-tight text-white">
                     Castorice
                   </p>
-                  <span className="font-mono text-[8px] uppercase tracking-[0.18em] text-violet-300/70">
-                    memokeeper
-                  </span>
                 </div>
                 <span className="font-mono text-[8px] uppercase tracking-[0.16em] text-zinc-600">
                   {line + 1} / {DIALOGUE.length}
@@ -261,7 +258,7 @@ export default function CastoriceViewer({ onClose }) {
           <div className="flex items-center gap-2">
             <span className="h-1.5 w-1.5 rounded-full bg-violet-300 shadow-[0_0_10px_2px_rgba(167,139,250,0.7)]" />
             <p className="font-mono text-[8.5px] uppercase tracking-[0.24em] text-violet-300/80">
-              quantum · remembrance
+              honkai: star rail
             </p>
           </div>
 
@@ -269,12 +266,7 @@ export default function CastoriceViewer({ onClose }) {
             Castorice
           </h2>
           <p className="mt-1 font-mono text-[9px] uppercase tracking-[0.16em] text-zinc-500">
-            memokeeper of the river of souls
-          </p>
-
-          <p className="mt-3 text-[12.5px] leading-relaxed text-zinc-300">
-            Castorice guides souls across the river and keeps what they leave behind. She speaks
-            softly, rarely hurries, and remembers everyone who passes through.
+            playable character
           </p>
 
           <div className="mt-4 grid grid-cols-2 gap-1.5">
@@ -297,7 +289,7 @@ export default function CastoriceViewer({ onClose }) {
               conversation
             </p>
             <p className="mt-1.5 text-[11px] leading-relaxed text-zinc-400">
-              She is waiting for you to say something. The river can wait a little longer.
+              Talk to her, or start over whenever you like.
             </p>
             <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
               <button

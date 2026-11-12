@@ -124,8 +124,8 @@ function HudHeader({ presence, onContact, views, onCastorice }) {
           onClick={onCastorice}
           onPointerEnter={prefetchCastoriceScene}
           onFocus={prefetchCastoriceScene}
-          aria-label="Open Castorice archive"
-          title="Open Castorice archive"
+          aria-label="Open Castorice"
+          title="Open Castorice"
           className="shine group inline-flex h-8 items-center gap-1.5 rounded-lg border border-violet-300/35 bg-gradient-to-r from-violet-600/75 via-indigo-600/65 to-cyan-600/55 px-2.5 font-mono text-[9px] font-semibold uppercase tracking-[0.1em] text-white shadow-[0_10px_30px_-14px_rgba(139,92,246,0.9)] transition hover:brightness-110 active:scale-95"
         >
           <CastoriceGlyph className="relative z-[2] h-3.5 w-3.5" />
