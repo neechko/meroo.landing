@@ -1116,16 +1116,41 @@ html.perf-lite .avatar-ring {
     0 1px 0 rgba(255, 255, 255, 0.08),
     0 -1px 1px rgba(0, 0, 0, 0.55);
 }
-/* The water itself: a duplicate of the wordmark clipped to the letters. The
-   fill rises from the baseline to the top over almost the whole ten seconds,
-   while a slow diagonal current keeps the surface from looking like a flat
-   colour wipe. */
-.preloader-logo::before {
-  content: attr(data-text);
+/* The water lives in its own wrapper so the wavy mask and the gradient text
+   never fight over the same element (Chrome renders that combination wrong).
+   The wrapper carries the wave mask and rises over almost the whole ten
+   seconds; the children carry the colour, current and droplets. */
+.preloader-water {
   position: absolute;
   inset: 0;
   pointer-events: none;
+  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='400'%20viewBox='0%200%20160%20400'%20preserveAspectRatio='none'%3E%3Cpath%20d='M0%20200%20Q40%20184%2080%20200%20T160%20200%20L160%20400%20L0%20400%20Z'%20fill='%23fff'/%3E%3C/svg%3E");
+  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='400'%20viewBox='0%200%20160%20400'%20preserveAspectRatio='none'%3E%3Cpath%20d='M0%20200%20Q40%20184%2080%20200%20T160%20200%20L160%20400%20L0%20400%20Z'%20fill='%23fff'/%3E%3C/svg%3E");
+  -webkit-mask-size: 160px 222%;
+  mask-size: 160px 222%;
+  -webkit-mask-repeat: repeat-x;
+  mask-repeat: repeat-x;
+  -webkit-mask-position: 0 0%;
+  mask-position: 0 0%;
+  animation: preloader-fill 9.5s cubic-bezier(0.42, 0, 0.58, 1) forwards;
+}
+.preloader-water-text,
+.preloader-water-drops {
+  position: absolute;
+  inset: 0;
+  display: block;
+  white-space: nowrap;
+  pointer-events: none;
+  font-family: var(--font-display);
+  font-size: clamp(2.4rem, 7.4vw, 4.8rem);
+  font-weight: 700;
+  line-height: 0.9;
+  letter-spacing: -0.035em;
   color: transparent;
+  -webkit-background-clip: text;
+  background-clip: text;
+}
+.preloader-water-text {
   background-image:
     repeating-linear-gradient(
       112deg,
@@ -1142,29 +1167,11 @@ html.perf-lite .avatar-ring {
     );
   background-size: 220% 100%, 100% 100%;
   background-repeat: repeat, no-repeat;
-  -webkit-background-clip: text;
-  background-clip: text;
-  filter: drop-shadow(0 0 24px rgba(103, 232, 249, 0.24));
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='400'%20viewBox='0%200%20160%20400'%3E%3Cpath%20d='M0%20200%20Q40%20160%2080%20200%20T160%20200%20L160%20400%20L0%20400%20Z'%20fill='%23fff'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='400'%20viewBox='0%200%20160%20400'%3E%3Cpath%20d='M0%20200%20Q40%20160%2080%20200%20T160%20200%20L160%20400%20L0%20400%20Z'%20fill='%23fff'/%3E%3C/svg%3E");
-  -webkit-mask-size: 160px 200%;
-  mask-size: 160px 200%;
-  -webkit-mask-repeat: repeat-x;
-  mask-repeat: repeat-x;
-  -webkit-mask-position: 0 0%;
-  mask-position: 0 0%;
-  animation:
-    preloader-fill 9.7s cubic-bezier(0.4, 0.05, 0.2, 1) forwards,
-    preloader-current 7s ease-in-out infinite alternate;
+  animation: preloader-current 7s ease-in-out infinite alternate;
 }
 /* Droplets and tiny ripples, clipped to the same letters and to the water
    level, so the fill has something moving inside it instead of one flat hue. */
-.preloader-logo::after {
-  content: attr(data-text);
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  color: transparent;
+.preloader-water-drops {
   background-image:
     radial-gradient(circle at 14% 26%, rgba(255, 255, 255, 0.95) 0 1.5%, transparent 2.8%),
     radial-gradient(circle at 37% 62%, rgba(255, 255, 255, 0.8) 0 1.1%, transparent 2.4%),
@@ -1180,20 +1187,7 @@ html.perf-lite .avatar-ring {
     );
   background-size: 100% 100%;
   background-repeat: no-repeat;
-  -webkit-background-clip: text;
-  background-clip: text;
-  mix-blend-mode: screen;
-  -webkit-mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='400'%20viewBox='0%200%20160%20400'%3E%3Cpath%20d='M0%20200%20Q40%20160%2080%20200%20T160%20200%20L160%20400%20L0%20400%20Z'%20fill='%23fff'/%3E%3C/svg%3E");
-  mask-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='400'%20viewBox='0%200%20160%20400'%3E%3Cpath%20d='M0%20200%20Q40%20160%2080%20200%20T160%20200%20L160%20400%20L0%20400%20Z'%20fill='%23fff'/%3E%3C/svg%3E");
-  -webkit-mask-size: 160px 200%;
-  mask-size: 160px 200%;
-  -webkit-mask-repeat: repeat-x;
-  mask-repeat: repeat-x;
-  -webkit-mask-position: 0 0%;
-  mask-position: 0 0%;
-  animation:
-    preloader-fill 9.7s cubic-bezier(0.4, 0.05, 0.2, 1) forwards,
-    preloader-drops 3.6s ease-in-out infinite;
+  animation: preloader-drops 3.6s ease-in-out infinite;
 }
 /* A bright meniscus line that rides the top of the water inside the letters. */
 .preloader-line {
@@ -1208,13 +1202,12 @@ html.perf-lite .avatar-ring {
   line-height: 0.9;
   letter-spacing: -0.035em;
   color: transparent;
-  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='400'%20viewBox='0%200%20160%20400'%3E%3Cpath%20d='M0%20200%20Q40%20160%2080%20200%20T160%20200'%20fill='none'%20stroke='%23e0f7ff'%20stroke-width='5'%20stroke-linecap='round'/%3E%3C/svg%3E");
-  background-size: 160px 200%;
+  background-image: url("data:image/svg+xml,%3Csvg%20xmlns='http://www.w3.org/2000/svg'%20width='160'%20height='400'%20viewBox='0%200%20160%20400'%20preserveAspectRatio='none'%3E%3Cpath%20d='M0%20200%20Q40%20184%2080%20200%20T160%20200'%20fill='none'%20stroke='%23e0f7ff'%20stroke-width='5'%20stroke-linecap='round'/%3E%3C/svg%3E");
+  background-size: 160px 222%;
   background-repeat: repeat-x;
   -webkit-background-clip: text;
   background-clip: text;
-  filter: drop-shadow(0 0 7px rgba(165, 243, 252, 0.85));
-  animation: preloader-surface 9.7s cubic-bezier(0.4, 0.05, 0.2, 1) forwards;
+  animation: preloader-surface 9.5s cubic-bezier(0.42, 0, 0.58, 1) forwards;
 }
 .preloader-sub {
   font-family: var(--font-mono);
@@ -1226,13 +1219,21 @@ html.perf-lite .avatar-ring {
   opacity: 0.75;
 }
 @keyframes preloader-fill {
-  from {
-    -webkit-mask-position: 0 0%;
-    mask-position: 0 0%;
+  0% {
+    -webkit-mask-position: 0 -9%;
+    mask-position: 0 -9%;
   }
-  to {
-    -webkit-mask-position: 160px 100%;
-    mask-position: 160px 100%;
+  6% {
+    -webkit-mask-position: 10px 2%;
+    mask-position: 10px 2%;
+  }
+  90% {
+    -webkit-mask-position: 144px 56%;
+    mask-position: 144px 56%;
+  }
+  100% {
+    -webkit-mask-position: 160px 66%;
+    mask-position: 160px 66%;
   }
 }
 @keyframes preloader-current {
@@ -1260,11 +1261,17 @@ html.perf-lite .avatar-ring {
   }
 }
 @keyframes preloader-surface {
-  from {
-    background-position: 0 0%;
+  0% {
+    background-position: 0 -9%;
   }
-  to {
-    background-position: 160px 100%;
+  6% {
+    background-position: 10px 2%;
+  }
+  90% {
+    background-position: 144px 56%;
+  }
+  100% {
+    background-position: 160px 66%;
   }
 }
 
@@ -1337,18 +1344,21 @@ html.perf-lite .avatar-ring {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .preloader-logo::before,
-  .preloader-logo::after {
+  .preloader-water {
     animation: none;
-    -webkit-mask-position: 0 100%;
-    mask-position: 0 100%;
+    -webkit-mask-position: 0 66%;
+    mask-position: 0 66%;
   }
-  .preloader-logo::after {
+  .preloader-water-text,
+  .preloader-water-drops {
+    animation: none;
+  }
+  .preloader-water-drops {
     opacity: 0.45;
   }
   .preloader-line {
     animation: none;
-    background-position: 0 100%;
+    background-position: 0 66%;
     opacity: 0.4;
   }
 }

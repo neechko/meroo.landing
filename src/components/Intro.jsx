@@ -295,10 +295,10 @@ export default function Intro({ onEnter }) {
                       disabled={warping}
                       whileHover={reduced ? undefined : { scale: 1.03 }}
                       whileTap={reduced ? undefined : { scale: 0.97 }}
-                      className="shine group relative mt-4 inline-flex items-center gap-3 rounded-full border border-violet-300/35 bg-[linear-gradient(180deg,rgba(109,40,217,0.92),rgba(49,24,95,0.96)_55%,rgba(18,9,38,0.98))] px-7 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-violet-50 shadow-[0_20px_60px_-22px_rgba(139,92,246,0.95),inset_0_1px_0_rgba(255,255,255,0.14)] ring-1 ring-cyan-300/15 transition hover:border-cyan-300/45 hover:text-white hover:shadow-[0_24px_70px_-20px_rgba(103,232,249,0.45),inset_0_1px_0_rgba(255,255,255,0.2)] disabled:cursor-wait"
+                      className="group relative mt-4 inline-flex items-center gap-3 rounded-full border border-violet-300/20 bg-[linear-gradient(180deg,rgba(76,49,132,0.52),rgba(28,18,52,0.7)_60%,rgba(14,8,28,0.82))] px-7 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-violet-100/85 shadow-[0_16px_38px_-26px_rgba(76,29,149,0.55),inset_0_1px_0_rgba(255,255,255,0.07)] ring-1 ring-white/5 backdrop-blur-sm transition hover:border-violet-300/35 hover:text-white hover:shadow-[0_18px_44px_-26px_rgba(139,92,246,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] disabled:cursor-wait"
                     >
                       <span className="relative z-[2]">{warping ? 'entering…' : 'Enter world'}</span>
-                      <ArrowRight className="relative z-[2] h-4 w-4 text-cyan-200 transition-transform duration-300 group-hover:translate-x-1" />
+                      <ArrowRight className="relative z-[2] h-4 w-4 text-violet-200/80 transition-transform duration-300 group-hover:translate-x-1" />
                     </motion.button>
 
                     <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-600">

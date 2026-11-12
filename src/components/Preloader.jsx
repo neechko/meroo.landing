@@ -17,8 +17,10 @@ export default function Preloader() {
     >
       <div className="preloader-lockup">
         <span className="preloader-word">
-          <span className="preloader-logo" data-text="meroo__">
-            meroo__
+          <span className="preloader-logo">meroo__</span>
+          <span className="preloader-water" aria-hidden="true">
+            <span className="preloader-water-text">meroo__</span>
+            <span className="preloader-water-drops">meroo__</span>
           </span>
           <span className="preloader-line" aria-hidden="true">
             meroo__
