@@ -1,5 +1,4 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { site } from '../config'
 import { startBgm } from '../lib/bgm'
@@ -48,7 +47,7 @@ const LINK_STEPS = [
  *             clicks or presses a key. This first gesture also unlocks audio.
  *   waking  → ~2.3s of portal/link boot: the wallpaper wakes up, status lines
  *             tick in, the word flips hello → player, the load bar fills.
- *   ready   → Enter appears; pressing it runs the warp into the HUD.
+ *   ready   → "press anywhere" appears; any click runs the warp into the HUD.
  *
  * Skip is always available. Reduced motion jumps straight to ready.
  */
@@ -136,7 +135,9 @@ export default function Intro({ onEnter }) {
     >
       <div
         className={`intro-stage absolute inset-0 is-${phase} ${warping ? 'is-warping' : ''}`}
-        onClick={phase === 'dormant' ? wake : undefined}
+        onClick={
+          phase === 'dormant' ? wake : phase === 'ready' ? enter : undefined
+        }
       >
         <div className="absolute inset-0 overflow-hidden">
           <div ref={bgRef} className="intro-parallax absolute -inset-6">
@@ -282,27 +283,23 @@ export default function Intro({ onEnter }) {
                     transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
                     className="flex flex-col items-center"
                   >
-                    <p className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-zinc-400">
-                      ready when you are
-                    </p>
-
-                    <motion.button
+                    <button
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation()
                         enter()
                       }}
                       disabled={warping}
-                      whileHover={reduced ? undefined : { scale: 1.03 }}
-                      whileTap={reduced ? undefined : { scale: 0.97 }}
-                      className="group relative mt-4 inline-flex items-center gap-3 rounded-full border border-violet-300/20 bg-[linear-gradient(180deg,rgba(76,49,132,0.52),rgba(28,18,52,0.7)_60%,rgba(14,8,28,0.82))] px-7 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-violet-100/85 shadow-[0_16px_38px_-26px_rgba(76,29,149,0.55),inset_0_1px_0_rgba(255,255,255,0.07)] ring-1 ring-white/5 backdrop-blur-sm transition hover:border-violet-300/35 hover:text-white hover:shadow-[0_18px_44px_-26px_rgba(139,92,246,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] disabled:cursor-wait"
+                      className="intro-prompt"
+                      aria-label="Enter"
                     >
-                      <span className="relative z-[2]">{warping ? 'entering…' : 'Enter'}</span>
-                      <ArrowRight className="relative z-[2] h-4 w-4 text-violet-200/80 transition-transform duration-300 group-hover:translate-x-1" />
-                    </motion.button>
+                      <span className="intro-prompt-text">
+                        {warping ? 'entering…' : 'press anywhere'}
+                      </span>
+                    </button>
 
-                    <p className="mt-3 font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-600">
-                      press enter · audio unlocked
+                    <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-600">
+                      or press enter · audio unlocked
                     </p>
                   </motion.div>
                 ) : (
