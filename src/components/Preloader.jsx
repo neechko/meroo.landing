@@ -29,7 +29,7 @@ export default function Preloader() {
         <span className="preloader-sub">universe</span>
       </div>
 
-      <span className="sr-only">Loading the world</span>
+      <span className="sr-only">Loading</span>
     </motion.div>
   )
 }

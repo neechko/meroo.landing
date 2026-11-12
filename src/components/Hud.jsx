@@ -38,7 +38,7 @@ const REVEAL_INDEX = { activity: 0, github: 1, anime: 2, profile: 3 }
 const TUTORIAL_KEY = 'meroo.tutorial.v2'
 
 // The 3D scene is a separate chunk. Warming it up on hover (and quietly after
-// the world loads) keeps the archive from showing a long loading state.
+// the page loads) keeps the archive from showing a long loading state.
 const prefetchCastoriceScene = () => {
   import('../lib/castoriceScene').catch(() => {})
 }
@@ -81,7 +81,7 @@ function HudHeader({ presence, onContact, views, onCastorice }) {
         />
         <span className="inline-flex items-center gap-1.5 rounded-full border border-cyan-300/20 bg-cyan-300/[0.06] px-2.5 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-cyan-200">
           <span className="h-1 w-1 rounded-full bg-cyan-300 shadow-[0_0_8px_2px_rgba(103,232,249,0.7)]" />
-          world online
+          online
         </span>
       </div>
 
@@ -177,7 +177,7 @@ function MobileTabs({ tab, setTab, hasMusic }) {
   )
 }
 
-export default function World({ entered }) {
+export default function Hud({ entered }) {
   const [tab, setTab] = useState('activity')
   const [contactOpen, setContactOpen] = useState(false)
   const [playerTrack, setPlayerTrack] = useState(null)

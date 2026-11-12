@@ -26,7 +26,7 @@ function ensureAudio() {
 }
 
 /**
- * Starts the world BGM. Must be called from a user gesture (the Enter button)
+ * Starts the site BGM. Must be called from a user gesture (the Enter button)
  * so browsers allow playback; every later call is a no-op.
  */
 export function startBgm() {

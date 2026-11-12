@@ -378,7 +378,7 @@ html.cursor-visible .cursor-shell {
 }
 
 /* ─────────────────── SINGLE-SCREEN HUD SHELL ─────────────────── */
-.world-shell {
+.hud-shell {
   height: 100dvh;
   width: 100%;
   overflow: hidden;
@@ -569,7 +569,7 @@ html.cursor-visible .cursor-shell {
   will-change: transform, opacity, filter;
 }
 
-/* ── Dormant cold open: the world is dark until the player interacts ── */
+/* ── Dormant cold open: the page is dark until the player interacts ── */
 .intro-bg {
   transition:
     filter 1.5s ease,
@@ -924,9 +924,9 @@ html.cursor-visible .cursor-shell {
 
 /* Keep the custom cursor above the HUD but below nothing else. */
 @media (hover: hover) and (pointer: fine) {
-  .world-shell a,
-  .world-shell button,
-  .world-shell [role="button"] {
+  .hud-shell a,
+  .hud-shell button,
+  .hud-shell [role="button"] {
     cursor: none;
   }
 }
@@ -1132,7 +1132,12 @@ html.perf-lite .avatar-ring {
   mask-repeat: repeat-x;
   -webkit-mask-position: 0 0%;
   mask-position: 0 0%;
-  animation: preloader-fill 9.5s cubic-bezier(0.42, 0, 0.58, 1) forwards;
+  /* The wave tile scrolls sideways (ten full cycles over the fill) while the
+     whole surface rises and bobs, so the water actually moves instead of
+     being one static wave pushed upward. */
+  animation:
+    preloader-fill 9.5s linear forwards,
+    preloader-bob 2.8s ease-in-out infinite;
 }
 .preloader-water-text,
 .preloader-water-drops {
@@ -1165,9 +1170,10 @@ html.perf-lite .avatar-ring {
       #c4b5fd 72%,
       #f5f3ff 100%
     );
-  background-size: 220% 100%, 100% 100%;
+  background-size: 100% 100%, 100% 100%;
   background-repeat: repeat, no-repeat;
-  animation: preloader-current 7s ease-in-out infinite alternate;
+  /* A slow light shimmer travelling through the body of the water. */
+  animation: preloader-current 2.2s linear infinite;
 }
 /* Droplets and tiny ripples, clipped to the same letters and to the water
    level, so the fill has something moving inside it instead of one flat hue. */
@@ -1187,7 +1193,7 @@ html.perf-lite .avatar-ring {
     );
   background-size: 100% 100%;
   background-repeat: no-repeat;
-  animation: preloader-drops 3.6s ease-in-out infinite;
+  animation: preloader-drops 3.4s ease-in-out infinite;
 }
 /* A bright meniscus line that rides the top of the water inside the letters. */
 .preloader-line {
@@ -1207,7 +1213,11 @@ html.perf-lite .avatar-ring {
   background-repeat: repeat-x;
   -webkit-background-clip: text;
   background-clip: text;
-  animation: preloader-surface 9.5s cubic-bezier(0.42, 0, 0.58, 1) forwards;
+  /* Rides the exact same wave and bob as the mask, so the bright meniscus
+     stays glued to the surface. */
+  animation:
+    preloader-surface 9.5s linear forwards,
+    preloader-bob 2.8s ease-in-out infinite;
 }
 .preloader-sub {
   font-family: var(--font-mono);
@@ -1224,16 +1234,44 @@ html.perf-lite .avatar-ring {
     mask-position: 0 -9%;
   }
   6% {
-    -webkit-mask-position: 10px 2%;
-    mask-position: 10px 2%;
+    -webkit-mask-position: 96px 2%;
+    mask-position: 96px 2%;
+  }
+  12% {
+    -webkit-mask-position: 192px 6%;
+    mask-position: 192px 6%;
+  }
+  22% {
+    -webkit-mask-position: 352px 13%;
+    mask-position: 352px 13%;
+  }
+  35% {
+    -webkit-mask-position: 560px 22%;
+    mask-position: 560px 22%;
+  }
+  50% {
+    -webkit-mask-position: 800px 32%;
+    mask-position: 800px 32%;
+  }
+  65% {
+    -webkit-mask-position: 1040px 41%;
+    mask-position: 1040px 41%;
+  }
+  80% {
+    -webkit-mask-position: 1280px 50%;
+    mask-position: 1280px 50%;
   }
   90% {
-    -webkit-mask-position: 144px 56%;
-    mask-position: 144px 56%;
+    -webkit-mask-position: 1440px 57%;
+    mask-position: 1440px 57%;
+  }
+  96% {
+    -webkit-mask-position: 1536px 62%;
+    mask-position: 1536px 62%;
   }
   100% {
-    -webkit-mask-position: 160px 66%;
-    mask-position: 160px 66%;
+    -webkit-mask-position: 1600px 66%;
+    mask-position: 1600px 66%;
   }
 }
 @keyframes preloader-current {
@@ -1241,23 +1279,32 @@ html.perf-lite .avatar-ring {
     background-position: 0 0, 0 0;
   }
   to {
-    background-position: 220% 0, 0 0;
+    background-position: 140px 0, 0 0;
   }
 }
 @keyframes preloader-drops {
   0% {
-    background-position: 0 -14%;
+    background-position: -6% -18%;
     opacity: 0;
   }
-  16% {
-    opacity: 0.95;
-  }
-  82% {
+  18% {
     opacity: 0.9;
   }
+  78% {
+    opacity: 0.85;
+  }
   100% {
-    background-position: 0 14%;
+    background-position: 6% 18%;
     opacity: 0;
+  }
+}
+@keyframes preloader-bob {
+  0%,
+  100% {
+    transform: translate3d(0, 0, 0);
+  }
+  50% {
+    transform: translate3d(0, -1.4px, 0);
   }
 }
 @keyframes preloader-surface {
@@ -1265,13 +1312,34 @@ html.perf-lite .avatar-ring {
     background-position: 0 -9%;
   }
   6% {
-    background-position: 10px 2%;
+    background-position: 96px 2%;
+  }
+  12% {
+    background-position: 192px 6%;
+  }
+  22% {
+    background-position: 352px 13%;
+  }
+  35% {
+    background-position: 560px 22%;
+  }
+  50% {
+    background-position: 800px 32%;
+  }
+  65% {
+    background-position: 1040px 41%;
+  }
+  80% {
+    background-position: 1280px 50%;
   }
   90% {
-    background-position: 144px 56%;
+    background-position: 1440px 57%;
+  }
+  96% {
+    background-position: 1536px 62%;
   }
   100% {
-    background-position: 160px 66%;
+    background-position: 1600px 66%;
   }
 }
 

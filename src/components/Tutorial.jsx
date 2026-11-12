@@ -80,7 +80,7 @@ export default function Tutorial({ revealed, active, onNext, onSkip }) {
           transition={{ duration: 0.45, ease: [0.22, 1, 0.36, 1] }}
           className="tutorial-card tutorial-vn fixed bottom-[4.9rem] left-1/2 z-[70] w-[min(94vw,36rem)] -translate-x-1/2 xl:bottom-5"
           role="dialog"
-          aria-label="World tutorial with Castorice"
+          aria-label="Tutorial with Castorice"
         >
           <div className="tutorial-vn-stage">
             <div className="tutorial-vn-portrait" aria-hidden="true">
@@ -155,7 +155,7 @@ export default function Tutorial({ revealed, active, onNext, onSkip }) {
                   onClick={advance}
                   className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/15 px-2.5 py-1.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.12em] text-violet-100 transition hover:bg-violet-500/25 active:scale-95"
                 >
-                  {typing ? 'continue' : complete ? 'enter the world' : 'next'}
+                  {typing ? 'continue' : complete ? 'enter' : 'next'}
                   <ArrowRight className="h-3 w-3" />
                 </button>
               </div>

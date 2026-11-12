@@ -1,6 +1,6 @@
-# meroo__ · enter the world
+# meroo__ · enter
 
-A single-screen personal world. No scrolling: you click **Enter world**, the intro warps away, and the HUD shows live Discord activity, GitHub projects, the MyAnimeList watching list, and a contact channel that actually sends a message.
+A single-screen personal hub. No scrolling: you click **Enter**, the intro warps away, and the HUD shows live Discord activity, GitHub projects, the MyAnimeList watching list, and a contact channel that actually sends a message.
 
 Built with **Vite + React + Tailwind CSS**, animated with **Framer Motion**, presence by **[Lanyard](https://lanyard.rest)**, deployed on **Vercel**.
 
@@ -8,7 +8,7 @@ Built with **Vite + React + Tailwind CSS**, animated with **Framer Motion**, pre
 
 ## What is on the screen
 
-- **Intro gate** — a full-screen “enter world” moment with a slow image pan and a warp transition. The click also counts as a user gesture, so music embeds can play later.
+- **Intro gate** — a full-screen “enter” moment with a slow image pan and a warp transition. The click also counts as a user gesture, so music embeds can play later.
 - **Profile panel** — avatar, Discord status, short bio, skills, and links to GitHub, Discord, MyAnimeList, and the website.
 - **Live signal** — realtime Discord presence over WebSocket, custom status, open apps, active devices, and now playing.
 - **Things I've built** — public repositories pulled from the GitHub API at runtime, with curated notes and a 10-minute session cache.
@@ -228,11 +228,11 @@ api/
 
 src/
 ├─ config.js                  # persona, links, GitHub/MAL/contact settings
-├─ App.jsx                    # intro + world composition
+├─ App.jsx                    # intro + HUD composition
 ├─ index.css                  # theme, HUD chrome, intro/keyframes
 ├─ components/
-│  ├─ Intro.jsx               # enter-world gate
-│  ├─ World.jsx               # HUD shell, data hooks, mobile tabs
+│  ├─ Intro.jsx               # enter gate
+│  ├─ Hud.jsx                 # HUD shell, data hooks, mobile tabs
 │  ├─ HudPanel.jsx            # shared panel chrome + header
 │  ├─ ProfilePanel.jsx
 │  ├─ ActivityPanel.jsx       # presence + now playing

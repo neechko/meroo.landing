@@ -38,7 +38,7 @@ const LINK_STEPS = [
   'discord presence',
   'github archive',
   'myanimelist log',
-  'world geometry',
+  'archive geometry',
 ]
 
 /**
@@ -48,7 +48,7 @@ const LINK_STEPS = [
  *             clicks or presses a key. This first gesture also unlocks audio.
  *   waking  → ~2.3s of portal/link boot: the wallpaper wakes up, status lines
  *             tick in, the word flips hello → player, the load bar fills.
- *   ready   → Enter world appears; pressing it runs the warp into the HUD.
+ *   ready   → Enter appears; pressing it runs the warp into the HUD.
  *
  * Skip is always available. Reduced motion jumps straight to ready.
  */
@@ -125,7 +125,7 @@ export default function Intro({ onEnter }) {
   const ready = phase === 'ready' || reduced
   const word = WORDS[Math.min(activeStep, WORDS.length - 1)]
   const statusLabel =
-    phase === 'dormant' ? 'system dormant' : phase === 'waking' ? 'linking world' : 'system ready'
+    phase === 'dormant' ? 'system dormant' : phase === 'waking' ? 'linking' : 'system ready'
 
   return (
     <motion.div
@@ -178,7 +178,7 @@ export default function Intro({ onEnter }) {
                   {site.name}
                 </p>
                 <p className="font-mono text-[9px] uppercase tracking-[0.26em] text-zinc-500">
-                  world gate
+                  personal archive
                 </p>
               </div>
             </div>
@@ -268,7 +268,7 @@ export default function Intro({ onEnter }) {
                         wake()
                       }}
                       className="intro-prompt group"
-                      aria-label="Open the portal and connect to the world"
+                      aria-label="Open the portal"
                     >
                       <span className="intro-prompt-text">open the portal</span>
                     </button>
@@ -283,7 +283,7 @@ export default function Intro({ onEnter }) {
                     className="flex flex-col items-center"
                   >
                     <p className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-zinc-400">
-                      the world is waiting
+                      ready when you are
                     </p>
 
                     <motion.button
@@ -297,7 +297,7 @@ export default function Intro({ onEnter }) {
                       whileTap={reduced ? undefined : { scale: 0.97 }}
                       className="group relative mt-4 inline-flex items-center gap-3 rounded-full border border-violet-300/20 bg-[linear-gradient(180deg,rgba(76,49,132,0.52),rgba(28,18,52,0.7)_60%,rgba(14,8,28,0.82))] px-7 py-3.5 font-mono text-[12px] font-semibold uppercase tracking-[0.14em] text-violet-100/85 shadow-[0_16px_38px_-26px_rgba(76,29,149,0.55),inset_0_1px_0_rgba(255,255,255,0.07)] ring-1 ring-white/5 backdrop-blur-sm transition hover:border-violet-300/35 hover:text-white hover:shadow-[0_18px_44px_-26px_rgba(139,92,246,0.4),inset_0_1px_0_rgba(255,255,255,0.1)] disabled:cursor-wait"
                     >
-                      <span className="relative z-[2]">{warping ? 'entering…' : 'Enter world'}</span>
+                      <span className="relative z-[2]">{warping ? 'entering…' : 'Enter'}</span>
                       <ArrowRight className="relative z-[2] h-4 w-4 text-violet-200/80 transition-transform duration-300 group-hover:translate-x-1" />
                     </motion.button>
 
@@ -338,7 +338,7 @@ export default function Intro({ onEnter }) {
                   ? 'link dormant'
                   : phase === 'waking'
                     ? 'establishing link'
-                    : 'world ready'}
+                    : 'ready'}
               </span>
               <span className="hidden sm:inline">github sync</span>
               <span className="hidden sm:inline">myanimelist</span>

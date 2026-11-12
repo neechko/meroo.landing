@@ -4,7 +4,7 @@ import Background from './components/Background'
 import Cursor from './components/Cursor'
 import Intro from './components/Intro'
 import Preloader from './components/Preloader'
-import World from './components/World'
+import Hud from './components/Hud'
 import { startBgm } from './lib/bgm'
 
 const LOADING_MS = 10_000
@@ -20,22 +20,22 @@ export default function App() {
     return () => window.clearTimeout(timer)
   }, [phase])
 
-  const enterWorld = useCallback(() => {
+  const enterHud = useCallback(() => {
     startBgm()
-    setPhase('world')
+    setPhase('hud')
   }, [])
 
   return (
-    <div className="world-shell relative">
+    <div className="hud-shell relative">
       {phase !== 'loading' ? <Background /> : null}
       {phase !== 'loading' ? <Cursor /> : null}
-      <World entered={phase === 'world'} />
+      <Hud entered={phase === 'hud'} />
 
       <AnimatePresence mode="wait">
         {phase === 'loading' ? (
           <Preloader key="preloader" />
         ) : phase === 'intro' ? (
-          <Intro key="intro" onEnter={enterWorld} />
+          <Intro key="intro" onEnter={enterHud} />
         ) : null}
       </AnimatePresence>
     </div>

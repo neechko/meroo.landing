@@ -136,7 +136,7 @@ export default function ProfilePanel({ presence, onContact, onReplayTutorial, vi
               <button
                 type="button"
                 onClick={onReplayTutorial}
-                title="Replay the world tutorial"
+                title="Replay the tutorial"
                 className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-zinc-600 transition hover:text-violet-300"
               >
                 replay tour
