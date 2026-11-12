@@ -60,9 +60,6 @@ function HudHeader({ presence, onContact, views, onCastorice }) {
           <p className="truncate font-display text-[13px] font-semibold leading-none tracking-tight text-white">
             {site.name}
           </p>
-          <p className="mt-1 truncate font-mono text-[8px] uppercase tracking-[0.24em] text-zinc-500">
-            personal archive
-          </p>
         </div>
       </div>
 

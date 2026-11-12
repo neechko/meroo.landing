@@ -124,14 +124,14 @@ export default function Intro({ onEnter }) {
   const ready = phase === 'ready' || reduced
   const word = WORDS[Math.min(activeStep, WORDS.length - 1)]
   const statusLabel =
-    phase === 'dormant' ? 'system dormant' : phase === 'waking' ? 'linking' : 'system ready'
+    phase === 'dormant' ? 'idle' : phase === 'waking' ? 'loading' : 'ready'
 
   return (
     <motion.div
       className="fixed inset-0 z-[120] overflow-hidden bg-[#04030a]"
       initial={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      transition={{ duration: reduced ? 0.01 : 0.3, ease: 'easeOut' }}
+      transition={{ duration: reduced ? 0.01 : 0.45, ease: 'easeOut' }}
     >
       <div
         className={`intro-stage absolute inset-0 is-${phase} ${warping ? 'is-warping' : ''}`}
@@ -174,14 +174,9 @@ export default function Intro({ onEnter }) {
                 <img src="/profile.jpg" alt="" className="h-full w-full object-cover" />
                 <span className="pointer-events-none absolute inset-0 bg-gradient-to-tr from-violet-600/35 via-transparent to-cyan-300/25" />
               </span>
-              <div>
-                <p className="font-display text-sm font-semibold tracking-tight text-white">
-                  {site.name}
-                </p>
-                <p className="font-mono text-[9px] uppercase tracking-[0.26em] text-zinc-500">
-                  personal archive
-                </p>
-              </div>
+              <p className="font-display text-sm font-semibold tracking-tight text-white">
+                {site.name}
+              </p>
             </div>
             <div className="flex items-center gap-2">
               <span className="hidden items-center gap-2 rounded-full border border-white/10 bg-white/[0.03] px-3 py-1 font-mono text-[9px] font-medium uppercase tracking-[0.18em] text-zinc-400 sm:inline-flex">
@@ -299,7 +294,7 @@ export default function Intro({ onEnter }) {
                     </button>
 
                     <p className="mt-2 font-mono text-[9px] uppercase tracking-[0.18em] text-zinc-600">
-                      or press enter · audio unlocked
+                      or press enter
                     </p>
                   </motion.div>
                 ) : (
@@ -312,7 +307,7 @@ export default function Intro({ onEnter }) {
                     className="flex flex-col items-center"
                   >
                     <p className="font-mono text-[9.5px] uppercase tracking-[0.22em] text-violet-200/80">
-                      establishing link…
+                      loading…
                     </p>
                     <ul className="intro-log" aria-hidden="true">
                       {LINK_STEPS.map((label, index) => (
@@ -332,9 +327,9 @@ export default function Intro({ onEnter }) {
             <div className="mx-auto flex max-w-xl items-center justify-between gap-4 border-t border-white/[0.06] pt-4 font-mono text-[9px] uppercase tracking-[0.2em] text-zinc-600">
               <span>
                 {phase === 'dormant'
-                  ? 'link dormant'
+                  ? 'idle'
                   : phase === 'waking'
-                    ? 'establishing link'
+                    ? 'loading'
                     : 'ready'}
               </span>
               <span className="hidden sm:inline">github sync</span>
