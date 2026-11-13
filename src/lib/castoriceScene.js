@@ -96,51 +96,61 @@ function makeWingTexture(accent) {
     `${Math.round(color.r * 255)}, ${Math.round(color.g * 255)}, ${Math.round(color.b * 255)}`
 
   const wing = new Path2D()
-  wing.moveTo(12, 128)
-  wing.bezierCurveTo(52, 42, 168, 18, 236, 62)
-  wing.bezierCurveTo(252, 82, 234, 116, 180, 130)
-  wing.bezierCurveTo(226, 150, 240, 198, 198, 226)
-  wing.bezierCurveTo(146, 254, 52, 214, 12, 128)
+  wing.moveTo(28, 128)
+  wing.bezierCurveTo(58, 44, 146, 22, 202, 50)
+  wing.bezierCurveTo(228, 64, 226, 98, 190, 116)
+  wing.bezierCurveTo(174, 124, 162, 126, 150, 128)
+  wing.bezierCurveTo(196, 142, 220, 168, 204, 196)
+  wing.bezierCurveTo(188, 224, 134, 226, 94, 204)
+  wing.bezierCurveTo(62, 186, 42, 158, 28, 128)
   wing.closePath()
 
-  // Soft outer bloom.
+  // Dark edge first: it separates the wing from the bright character behind
+  // it, so the silhouette stays readable instead of dissolving into the glow.
   ctx.save()
-  ctx.shadowColor = `rgba(${rgb(base)}, 0.9)`
-  ctx.shadowBlur = 24
-  const fill = ctx.createLinearGradient(12, 150, 246, 108)
+  ctx.strokeStyle = `rgba(${rgb(deep)}, 0.9)`
+  ctx.lineWidth = 7
+  ctx.stroke(wing)
+  ctx.restore()
+
+  // Soft outer bloom, kept inside the canvas so the wing tip is never clipped.
+  ctx.save()
+  ctx.shadowColor = `rgba(${rgb(base)}, 0.85)`
+  ctx.shadowBlur = 14
+  const fill = ctx.createLinearGradient(28, 150, 226, 104)
   fill.addColorStop(0, `rgba(${rgb(deep)}, 0.98)`)
   fill.addColorStop(0.34, `rgba(${rgb(base)}, 0.96)`)
-  fill.addColorStop(0.76, `rgba(${rgb(light)}, 0.92)`)
-  fill.addColorStop(1, 'rgba(255, 255, 255, 0.74)')
+  fill.addColorStop(0.78, `rgba(${rgb(light)}, 0.94)`)
+  fill.addColorStop(1, 'rgba(255, 255, 255, 0.8)')
   ctx.fillStyle = fill
   ctx.fill(wing)
   ctx.restore()
 
-  // Bright rim so the silhouette stays readable at small sizes.
+  // Bright rim so the wing catches the light at small sizes.
   ctx.save()
-  ctx.strokeStyle = `rgba(${rgb(light)}, 0.85)`
-  ctx.lineWidth = 3
-  ctx.shadowColor = `rgba(${rgb(base)}, 0.9)`
-  ctx.shadowBlur = 12
+  ctx.strokeStyle = `rgba(${rgb(light)}, 0.75)`
+  ctx.lineWidth = 2.2
+  ctx.shadowColor = `rgba(${rgb(base)}, 0.8)`
+  ctx.shadowBlur = 8
   ctx.stroke(wing)
   ctx.restore()
 
-  // Veins, kept faint so they add detail without noise.
+  // Veins fanning out from the wing root.
   ctx.save()
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.26)'
-  ctx.lineWidth = 1.3
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.22)'
+  ctx.lineWidth = 1.2
   for (let index = 0; index < 4; index += 1) {
-    const y = 92 + index * 30
+    const spread = index * 16
     ctx.beginPath()
-    ctx.moveTo(18, 128)
-    ctx.quadraticCurveTo(120, y - 4, 222, y + 8)
+    ctx.moveTo(34, 128)
+    ctx.quadraticCurveTo(120, 86 + spread, 196, 74 + spread * 1.4)
     ctx.stroke()
   }
   ctx.restore()
 
   // Light pooling at the wing base.
-  const inner = ctx.createRadialGradient(30, 128, 2, 30, 128, 92)
-  inner.addColorStop(0, 'rgba(255, 255, 255, 0.42)')
+  const inner = ctx.createRadialGradient(36, 128, 2, 36, 128, 88)
+  inner.addColorStop(0, 'rgba(255, 255, 255, 0.38)')
   inner.addColorStop(1, 'rgba(255, 255, 255, 0)')
   ctx.fillStyle = inner
   ctx.fill(wing)
@@ -151,21 +161,21 @@ function makeWingTexture(accent) {
   return texture
 }
 
-function makeWing(accent) {
+function makeWing(texture) {
   const geometry = new THREE.PlaneGeometry(1, 1)
   // Move the pivot to the body so the wing grows out of the thorax instead of
   // spinning around its own centre.
   geometry.translate(0.5, 0, 0)
   const material = new THREE.MeshBasicMaterial({
-    map: makeWingTexture(accent),
+    map: texture,
     transparent: true,
-    opacity: 0.96,
+    opacity: 0.97,
     depthWrite: false,
     side: THREE.DoubleSide,
     toneMapped: false,
   })
   const mesh = new THREE.Mesh(geometry, material)
-  mesh.scale.setScalar(0.11)
+  mesh.scale.setScalar(0.13)
   return mesh
 }
 
@@ -184,6 +194,10 @@ function makeButterfly(accent) {
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.011, 0.05, 4, 8), bodyMaterial)
   group.add(body)
 
+  // Both wings share one texture per butterfly; drawing it twice would only
+  // double the canvas work for the same pixels.
+  const wingTexture = makeWingTexture(accent)
+
   // Each wing hangs off its own pivot so the beat stays symmetric. The wings
   // live in the XY plane and the whole butterfly turns to face the camera, so
   // the silhouette is always readable instead of showing up edge-on.
@@ -191,7 +205,7 @@ function makeButterfly(accent) {
     const pivot = new THREE.Group()
     pivot.scale.x = side
     pivot.userData.side = side
-    pivot.add(makeWing(accent))
+    pivot.add(makeWing(wingTexture))
     group.add(pivot)
     return pivot
   }
@@ -327,12 +341,14 @@ export function createCastoriceScene(
   const butterflyColors = [VIOLET, CYAN, PINK, 0xa78bfa, 0x7dd3fc]
   for (let index = 0; index < quality.butterflies; index += 1) {
     const butterfly = makeButterfly(butterflyColors[index % butterflyColors.length])
-    const radius = 0.55 + (index % 4) * 0.18
+    // Slight size variety gives the swarm some depth without extra geometry.
+    butterfly.scale.setScalar(0.84 + (index % 3) * 0.13)
+    const radius = 0.62 + (index % 4) * 0.2
     butterfly.userData.orbit = {
       radius,
       speed: 0.16 + index * 0.035,
       phase: index * 1.4,
-      baseY: 1.0 + (index % 5) * 0.24,
+      baseY: 1.05 + (index % 5) * 0.22,
       tilt: (index % 2 ? 1 : -1) * 0.18,
     }
     scene.add(butterfly)
@@ -361,6 +377,10 @@ export function createCastoriceScene(
   const state = {
     pointerX: 0,
     pointerY: 0,
+    pointerTargetX: 0,
+    pointerTargetY: 0,
+    pointerActive: false,
+    pointerEase: 0,
     targetX: 0,
     targetY: 0,
     dragging: false,
@@ -375,8 +395,9 @@ export function createCastoriceScene(
   }
 
   const resetPointer = () => {
-    state.pointerX = 0
-    state.pointerY = 0
+    state.pointerActive = false
+    state.pointerTargetX = 0
+    state.pointerTargetY = 0
   }
 
   const measure = () => {
@@ -401,8 +422,9 @@ export function createCastoriceScene(
   const onPointerMove = (event) => {
     const rect = canvas.getBoundingClientRect()
     if (rect.width && rect.height) {
-      state.pointerX = ((event.clientX - rect.left) / rect.width) * 2 - 1
-      state.pointerY = ((event.clientY - rect.top) / rect.height) * 2 - 1
+      state.pointerTargetX = ((event.clientX - rect.left) / rect.width) * 2 - 1
+      state.pointerTargetY = ((event.clientY - rect.top) / rect.height) * 2 - 1
+      state.pointerActive = true
     }
 
     if (!state.dragging) return
@@ -777,11 +799,21 @@ export function createCastoriceScene(
         mixer: modelMixer,
         camera,
         character,
+        scene,
+        renderer,
         size: size.toArray(),
         scale,
         getExpression: () => activeExpression?._clip?.name ?? null,
         isBlinking: () => Boolean(blinkAction),
         getPose: () => poseName,
+        getPointer: () => ({
+          x: state.pointerX,
+          y: state.pointerY,
+          targetX: state.pointerTargetX,
+          targetY: state.pointerTargetY,
+          ease: state.pointerEase,
+          active: state.pointerActive,
+        }),
         setPose,
         playClip,
         getBodyClips: () => [...bodyClips.keys()],
@@ -834,13 +866,23 @@ export function createCastoriceScene(
     // procedural preset eases the arms into their gesture.
     if (!bodyAction) applyBodyPose(delta)
 
-    const pointerX = reduced ? 0 : state.pointerX
-    const pointerY = reduced ? 0 : state.pointerY
+    // Pointer feedback eases in and out instead of snapping. A first hover
+    // ramps the response up over ~0.4s, and leaving lets the figure settle
+    // back to rest instead of freezing mid-turn.
+    const follow = reduced ? 1 : 1 - Math.exp(-delta * 7)
+    const envelope = reduced ? 1 : 1 - Math.exp(-delta * 5.5)
+    state.pointerEase += ((state.pointerActive ? 1 : 0) - state.pointerEase) * envelope
+    state.pointerX += (state.pointerTargetX - state.pointerX) * follow
+    state.pointerY += (state.pointerTargetY - state.pointerY) * follow
+
+    const pointerX = reduced ? 0 : state.pointerX * state.pointerEase
+    const pointerY = reduced ? 0 : state.pointerY * state.pointerEase
     state.talkPulse = Math.max(0, state.talkPulse - delta * 2.2)
     const talk = reduced ? 0 : state.talkPulse
 
-    state.targetX += (state.orbitX + pointerY * 0.06 - state.targetX) * 0.075
-    state.targetY += (state.orbitY + pointerX * 0.24 - state.targetY) * 0.075
+    const turn = reduced ? 1 : 1 - Math.exp(-delta * 4.6)
+    state.targetX += (state.orbitX + pointerY * 0.06 - state.targetX) * turn
+    state.targetY += (state.orbitY + pointerX * 0.24 - state.targetY) * turn
 
     // A quiet idle layered on top of the face poses: breathing through the
     // spine and a slow turn of the head toward the pointer. The expression
@@ -894,8 +936,9 @@ export function createCastoriceScene(
     motes.material.opacity = reduced ? 0.7 : 0.62 + Math.sin(t * 0.8) * 0.14
     ground.rotation.y = reduced ? 0 : t * 0.02
 
-    camera.position.x += (pointerX * 0.1 - camera.position.x) * 0.05
-    camera.position.y += (framing.y - pointerY * 0.05 - camera.position.y) * 0.05
+    const camEase = reduced ? 1 : 1 - Math.exp(-delta * 3.2)
+    camera.position.x += (pointerX * 0.1 - camera.position.x) * camEase
+    camera.position.y += (framing.y - pointerY * 0.05 - camera.position.y) * camEase
     camera.position.z += (framing.z - camera.position.z) * 0.05
     camera.lookAt(0, framing.look, 0)
 
