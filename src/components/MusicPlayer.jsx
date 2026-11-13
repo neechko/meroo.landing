@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { ExternalLink, Music2, RotateCcw, Volume2, X } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { pauseBgmForPlayer, resumeBgmAfterPlayer } from '../lib/bgm'
 import { AlbumArt } from './presence-parts'
 
 /**
@@ -13,6 +14,12 @@ import { AlbumArt } from './presence-parts'
  */
 export default function MusicPlayer({ track, onClose }) {
   const [playerKey, setPlayerKey] = useState(0)
+
+  // Never let the ambient BGM and the dialog play at the same time.
+  useEffect(() => {
+    pauseBgmForPlayer()
+    return () => resumeBgmAfterPlayer()
+  }, [])
 
   useEffect(() => {
     const onKey = (event) => {

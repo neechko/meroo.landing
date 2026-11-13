@@ -135,6 +135,7 @@ export default function Intro({ onEnter }) {
     >
       <div
         className={`intro-stage absolute inset-0 is-${phase} ${warping ? 'is-warping' : ''}`}
+        data-sfx="confirm"
         onClick={
           phase === 'dormant' ? wake : phase === 'ready' ? enter : undefined
         }

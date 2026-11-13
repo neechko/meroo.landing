@@ -171,6 +171,7 @@ export default function CastoriceViewer({ onClose }) {
           <canvas
             ref={canvasRef}
             className="castorice-canvas absolute inset-0 h-full w-full touch-none"
+            data-sfx="chime"
             aria-label="Interactive 3D Castorice figure"
           />
 

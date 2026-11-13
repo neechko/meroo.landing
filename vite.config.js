@@ -4,11 +4,13 @@ import { defineConfig, loadEnv } from 'vite'
 import contact from './api/contact.js'
 import mal from './api/mal.js'
 import views from './api/views.js'
+import appIcon from './api/app-icon.js'
 
 const API_ROUTES = {
   '/api/contact': contact,
   '/api/mal': mal,
   '/api/views': views,
+  '/api/app-icon': appIcon,
 }
 
 function readJson(req) {

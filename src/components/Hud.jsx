@@ -1,8 +1,8 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { Activity, ListVideo, Mail, UserRound, Volume2, VolumeX } from 'lucide-react'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { discordProfileUrl, site } from '../config'
-import { useBgm } from '../lib/bgm'
+import { setBgmTrack, useBgm } from '../lib/bgm'
 import { statusMeta, localTime } from '../lib/format'
 import { useGithubRepos } from '../lib/github'
 import { useNow } from '../lib/hooks'
@@ -48,6 +48,8 @@ function HudHeader({ presence, onContact, views, onCastorice }) {
   const status = presence?.discord_status ?? 'offline'
   const meta = statusMeta(status)
   const bgm = useBgm()
+  const trackLabel = bgm.title || 'background music'
+  const toggleLabel = `${bgm.playing ? 'Pause' : 'Play'} ${trackLabel}`
 
   return (
     <header className="hud-topbar relative z-20 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-white/[0.06] bg-[#05030c]/50 px-3 backdrop-blur-xl sm:px-4">
@@ -106,8 +108,8 @@ function HudHeader({ presence, onContact, views, onCastorice }) {
         <button
           type="button"
           onClick={bgm.toggle}
-          aria-label={bgm.playing ? 'Pause background music' : 'Play background music'}
-          title={bgm.playing ? 'Pause background music' : 'Play background music'}
+          aria-label={toggleLabel}
+          title={toggleLabel}
           className={`relative grid h-8 w-8 place-items-center rounded-lg border transition ${
             bgm.playing
               ? 'border-violet-300/35 bg-violet-500/10 text-violet-200'
@@ -196,7 +198,16 @@ export default function Hud({ entered }) {
     demoFallback: site.demoFallback,
   })
 
-  const nowPlaying = getNowPlaying(presence)
+  // Memoised so the BGM effect only re-runs when the reported track changes,
+  // not on every render of the presence card.
+  const nowPlaying = useMemo(() => getNowPlaying(presence), [presence])
+  const bgm = useBgm()
+
+  // A track detected by Lanyard becomes the BGM when it has a YouTube source;
+  // otherwise the local Castorice track stays in charge.
+  useEffect(() => {
+    setBgmTrack(nowPlaying)
+  }, [nowPlaying])
 
   const github = useGithubRepos(site.github.username, {
     limit: site.github.limit,
@@ -323,6 +334,7 @@ export default function Hud({ entered }) {
             lastUpdate={lastUpdate}
             error={error}
             onPlay={() => setPlayerTrack(nowPlaying)}
+            bgmActive={bgm.playing && bgm.source === 'discord'}
             className="h-full w-full"
           />
         </Tilt>

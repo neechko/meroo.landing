@@ -1,4 +1,5 @@
 import { Activity, ExternalLink, Headphones, WifiOff } from 'lucide-react'
+import { useAppIcons } from '../lib/appIcons'
 import { isCustomStatus, isMusicActivity, formatClock, timeAgo } from '../lib/format'
 import { useNow } from '../lib/hooks'
 import HudPanel, { PanelHead } from './HudPanel'
@@ -30,7 +31,7 @@ function TrackProgress({ timestamps, className = '' }) {
   )
 }
 
-function NowPlaying({ track, onPlay }) {
+function NowPlaying({ track, onPlay, bgmActive = false }) {
   return (
     <div className="activity-now card-zoom relative overflow-hidden rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.045] p-3 transition duration-300 hover:border-emerald-300/30">
       {track.art ? (
@@ -49,10 +50,18 @@ function NowPlaying({ track, onPlay }) {
           rounded="rounded-xl"
         />
         <div className="min-w-0 flex-1">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.14em] text-emerald-300 ring-1 ring-emerald-400/25">
-            <Equalizer className="h-2.5" />
-            {track.source}
-          </span>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.14em] text-emerald-300 ring-1 ring-emerald-400/25">
+              <Equalizer className="h-2.5" />
+              {track.source}
+            </span>
+            {bgmActive ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.14em] text-violet-200 ring-1 ring-violet-400/25">
+                <span className="h-1 w-1 rounded-full bg-violet-300 shadow-[0_0_6px_1px_rgba(196,181,253,0.8)]" />
+                bgm
+              </span>
+            ) : null}
+          </div>
           <p className="activity-now-title mt-1.5 truncate font-display text-[15px] font-semibold leading-tight text-white">
             {track.title}
           </p>
@@ -115,12 +124,14 @@ export default function ActivityPanel({
   lastUpdate,
   error,
   onPlay,
+  bgmActive = false,
   className = '',
 }) {
   const now = useNow(15_000)
   const activities = (presence?.activities ?? []).filter(
     (item) => !isCustomStatus(item) && !isMusicActivity(item),
   )
+  const appIcons = useAppIcons(activities.map((item) => item.application_id))
 
   const statusNote = loading
     ? 'connecting to discord'
@@ -147,7 +158,7 @@ export default function ActivityPanel({
             <CustomStatus presence={presence} className="text-[12px]" />
 
             {nowPlaying ? (
-              <NowPlaying track={nowPlaying} onPlay={onPlay} />
+              <NowPlaying track={nowPlaying} onPlay={onPlay} bgmActive={bgmActive} />
             ) : (
               <div className="rounded-2xl border border-dashed border-white/[0.09] bg-white/[0.015] p-3.5">
                 <div className="flex items-center gap-3">
@@ -169,7 +180,12 @@ export default function ActivityPanel({
             {activities.length ? (
               <div className="grid gap-1.5">
                 {activities.slice(0, 2).map((activity) => (
-                  <ActivityRow key={activity.id ?? activity.name} activity={activity} dense />
+                  <ActivityRow
+                    key={activity.id ?? activity.name}
+                    activity={activity}
+                    fallbackSrc={appIcons[activity.application_id] ?? null}
+                    dense
+                  />
                 ))}
               </div>
             ) : (

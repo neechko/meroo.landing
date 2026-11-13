@@ -416,7 +416,11 @@ export function createCastoriceScene(
     state.lastX = event.clientX
     state.lastY = event.clientY
     state.moved = 0
-    canvas.setPointerCapture?.(event.pointerId)
+    try {
+      canvas.setPointerCapture?.(event.pointerId)
+    } catch {
+      // Synthetic events (tests, assistive tools) have no active pointer.
+    }
   }
 
   const onPointerMove = (event) => {
@@ -440,7 +444,11 @@ export function createCastoriceScene(
   const onPointerUp = (event) => {
     if (!state.dragging) return
     state.dragging = false
-    canvas.releasePointerCapture?.(event.pointerId)
+    try {
+      canvas.releasePointerCapture?.(event.pointerId)
+    } catch {
+      // The pointer may already be released (or never captured).
+    }
     if (state.moved < 7) {
       state.talkPulse = 1
       onTalk?.()

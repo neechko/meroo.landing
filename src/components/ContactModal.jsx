@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { ArrowUpRight, Check, Loader2, Mail, Send, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { discordProfileUrl, site } from '../config'
+import { playSfx } from '../lib/sfx'
 import { DiscordIcon } from './icons'
 
 const EMPTY = { name: '', contact: '', message: '', website: '' }
@@ -55,11 +56,13 @@ export default function ContactModal({ onClose }) {
     if (form.name.trim().length < 2) {
       setStatus('error')
       setError('Please add a name first.')
+      playSfx('error')
       return
     }
     if (form.message.trim().length < 5) {
       setStatus('error')
       setError('Please write a slightly longer message.')
+      playSfx('error')
       return
     }
 
@@ -76,9 +79,11 @@ export default function ContactModal({ onClose }) {
       if (!response.ok) throw new Error(data?.error || `The server answered HTTP ${response.status}.`)
       setStatus('sent')
       setForm(EMPTY)
+      playSfx('chime')
     } catch (cause) {
       setStatus('error')
       setError(cause.message || 'Could not send the message.')
+      playSfx('error')
     }
   }
 

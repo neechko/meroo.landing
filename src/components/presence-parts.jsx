@@ -4,25 +4,41 @@ import { activityImage, activityLabel, formatClock, formatElapsed, isCustomStatu
 import { useNow } from '../lib/hooks'
 import { Equalizer, StatusDot } from './ui'
 
-function iconFor(name = '') {
-  if (/code|studio/i.test(name)) return Code2
-  if (/spotify|music/i.test(name)) return Music2
-  if (/game|valorant|minecraft|league|steam/i.test(name)) return Gamepad2
-  return AppWindow
+function ActivityGlyph({ activity, className }) {
+  const name = activity?.name ?? ''
+  if (/code|studio/i.test(name)) return <Code2 className={className} />
+  if (/spotify|music|soundcloud|tidal|deezer/i.test(name)) return <Music2 className={className} />
+  if (activity?.type === 0 || activity?.type === 1 || activity?.type === 5) {
+    return <Gamepad2 className={className} />
+  }
+  if (/game|valorant|minecraft|league|steam|genshin|honkai|star rail/i.test(name)) {
+    return <Gamepad2 className={className} />
+  }
+  return <AppWindow className={className} />
 }
 
-export function ActivityArt({ activity, className = 'h-12 w-12', rounded = 'rounded-xl' }) {
-  const [failed, setFailed] = useState(false)
-  const src = activityImage(activity)
-  const Icon = iconFor(activity?.name)
+export function ActivityArt({
+  activity,
+  fallbackSrc = null,
+  className = 'h-12 w-12',
+  rounded = 'rounded-xl',
+}) {
+  const primary = activityImage(activity)
+  const sources = [primary, fallbackSrc].filter(Boolean)
+  const signature = `${primary ?? ''}|${fallbackSrc ?? ''}`
+  const [chain, setChain] = useState({ signature, stage: 0 })
 
-  if (src && !failed) {
+  // A new activity (or a late-arriving app icon) starts the chain over.
+  const stage = chain.signature === signature ? chain.stage : 0
+  const src = sources[stage] ?? null
+
+  if (src) {
     return (
       <img
         src={src}
         alt={activity?.name ?? 'Activity'}
         loading="lazy"
-        onError={() => setFailed(true)}
+        onError={() => setChain({ signature, stage: stage + 1 })}
         className={`${className} ${rounded} shrink-0 object-cover shadow-lg ring-1 ring-white/10`}
       />
     )
@@ -33,7 +49,7 @@ export function ActivityArt({ activity, className = 'h-12 w-12', rounded = 'roun
       className={`${className} ${rounded} grid shrink-0 place-items-center bg-gradient-to-br from-violet-600/30 via-fuchsia-600/20 to-indigo-600/30 text-violet-200 ring-1 ring-white/10`}
       aria-hidden="true"
     >
-      <Icon className="h-[42%] w-[42%]" />
+      <ActivityGlyph activity={activity} className="h-[42%] w-[42%]" />
     </div>
   )
 }
@@ -103,7 +119,7 @@ export function CustomStatus({ presence, className = '' }) {
   )
 }
 
-export function ActivityRow({ activity, dense = false }) {
+export function ActivityRow({ activity, dense = false, fallbackSrc = null }) {
   useNow(1000)
   const elapsed = formatElapsed(activity.timestamps?.start ?? activity.created_at)
 
@@ -115,6 +131,7 @@ export function ActivityRow({ activity, dense = false }) {
     >
       <ActivityArt
         activity={activity}
+        fallbackSrc={fallbackSrc}
         className={`activity-art ${dense ? 'h-10 w-10' : 'h-12 w-12'}`}
       />
       <div className="min-w-0 flex-1">
