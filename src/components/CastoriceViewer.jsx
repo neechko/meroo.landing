@@ -171,7 +171,7 @@ export default function CastoriceViewer({ onClose }) {
           <canvas
             ref={canvasRef}
             className="castorice-canvas absolute inset-0 h-full w-full touch-none"
-            data-sfx="chime"
+            data-sfx="tab"
             aria-label="Interactive 3D Castorice figure"
           />
 
@@ -212,6 +212,7 @@ export default function CastoriceViewer({ onClose }) {
               role="button"
               tabIndex={0}
               onClick={advance}
+              data-sfx="tab"
               onKeyDown={(event) => {
                 if (event.key === 'Enter' || event.key === ' ') {
                   event.preventDefault()
@@ -296,6 +297,7 @@ export default function CastoriceViewer({ onClose }) {
               <button
                 type="button"
                 onClick={advance}
+                data-sfx="tab"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/15 px-2.5 py-1.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.12em] text-violet-100 transition hover:bg-violet-500/25 active:scale-95"
               >
                 <MessageCircle className="h-3 w-3" />
@@ -304,6 +306,7 @@ export default function CastoriceViewer({ onClose }) {
               <button
                 type="button"
                 onClick={() => goToLine(0)}
+                data-sfx="toggle"
                 className="inline-flex items-center gap-1.5 rounded-lg border border-white/[0.09] bg-white/[0.03] px-2.5 py-1.5 font-mono text-[8.5px] uppercase tracking-[0.12em] text-zinc-300 transition hover:border-white/25 hover:text-white active:scale-95"
               >
                 <RotateCcw className="h-3 w-3" />

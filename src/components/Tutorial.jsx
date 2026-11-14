@@ -153,6 +153,7 @@ export default function Tutorial({ revealed, active, onNext, onSkip }) {
                 <button
                   type="button"
                   onClick={advance}
+                  data-sfx={complete ? 'confirm' : 'tab'}
                   className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-violet-400/30 bg-violet-500/15 px-2.5 py-1.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.12em] text-violet-100 transition hover:bg-violet-500/25 active:scale-95"
                 >
                   {typing ? 'continue' : complete ? 'enter' : 'next'}
