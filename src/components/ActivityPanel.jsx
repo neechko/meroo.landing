@@ -42,45 +42,50 @@ function NowPlaying({ track, onPlay, bgmActive = false }) {
         />
       ) : null}
 
-      <div className="relative flex items-start gap-3">
-        <AlbumArt
-          src={track.art}
-          alt={track.album || track.title}
-          className="activity-now-art h-[60px] w-[60px] shrink-0"
-          rounded="rounded-xl"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-1.5">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.14em] text-emerald-300 ring-1 ring-emerald-400/25">
-              <Equalizer className="h-2.5" />
-              {track.source}
-            </span>
-            {bgmActive ? (
-              <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.14em] text-violet-200 ring-1 ring-violet-400/25">
-                <span className="h-1 w-1 rounded-full bg-violet-300 shadow-[0_0_6px_1px_rgba(196,181,253,0.8)]" />
-                bgm
+      <div className="relative flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <AlbumArt
+            src={track.art}
+            alt={track.album || track.title}
+            className="activity-now-art h-[52px] w-[52px] shrink-0 sm:h-[60px] sm:w-[60px]"
+            rounded="rounded-xl"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.14em] text-emerald-300 ring-1 ring-emerald-400/25">
+                <Equalizer className="h-2.5" />
+                {track.source}
               </span>
+              {bgmActive ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.14em] text-violet-200 ring-1 ring-violet-400/25">
+                  <span className="h-1 w-1 rounded-full bg-violet-300 shadow-[0_0_6px_1px_rgba(196,181,253,0.8)]" />
+                  bgm
+                </span>
+              ) : null}
+            </div>
+            <p className="activity-now-title mt-1.5 line-clamp-2 font-display text-[14px] font-semibold leading-tight text-white sm:line-clamp-1 sm:text-[15px]">
+              {track.title}
+            </p>
+            <p className="truncate text-[10.5px] text-zinc-400 sm:text-[11px]">
+              {track.artist || 'Unknown artist'}
+            </p>
+            {track.album ? (
+              <p className="activity-now-album truncate font-mono text-[8.5px] uppercase tracking-[0.12em] text-zinc-500">{track.album}</p>
             ) : null}
           </div>
-          <p className="activity-now-title mt-1.5 truncate font-display text-[15px] font-semibold leading-tight text-white">
-            {track.title}
-          </p>
-          <p className="truncate text-[11px] text-zinc-400">{track.artist || 'Unknown artist'}</p>
-          {track.album ? (
-            <p className="activity-now-album truncate font-mono text-[8.5px] uppercase tracking-[0.12em] text-zinc-500">{track.album}</p>
-          ) : null}
         </div>
 
-        {/* Actions stay on the side of the card header, above the activity
-            rows, so neither one can ever be covered by what sits below. */}
-        <div className="relative z-[2] flex shrink-0 flex-col items-stretch gap-1.5">
+        {/* Actions stay on the side of the card header on desktop. On phones
+            they move below the track info so the title keeps the full width,
+            and they remain above the activity rows either way. */}
+        <div className="relative z-[2] flex w-full shrink-0 items-stretch gap-1.5 sm:w-auto sm:flex-col">
           {track.embed ? (
             <button
               type="button"
               onClick={onPlay}
               aria-label={`Play ${track.title} here`}
               title="Play here"
-              className="group/play inline-flex items-center justify-center gap-1.5 rounded-lg border border-violet-300/30 bg-gradient-to-r from-violet-500/25 via-indigo-500/20 to-cyan-400/20 px-2.5 py-1.5 text-[10px] font-semibold text-violet-100 shadow-[0_8px_20px_-12px_rgba(139,92,246,0.95)] transition hover:border-cyan-300/45 hover:from-violet-500/35 hover:to-cyan-400/30 hover:text-white active:scale-95"
+              className="group/play inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-violet-300/30 bg-gradient-to-r from-violet-500/25 via-indigo-500/20 to-cyan-400/20 px-2.5 py-2 text-[10px] font-semibold text-violet-100 shadow-[0_8px_20px_-12px_rgba(139,92,246,0.95)] transition hover:border-cyan-300/45 hover:from-violet-500/35 hover:to-cyan-400/30 hover:text-white active:scale-95 sm:flex-none sm:py-1.5"
             >
               <PlayGlyph className="h-3.5 w-3.5 text-cyan-200 transition group-hover/play:text-cyan-100" />
               Play here
@@ -91,7 +96,7 @@ function NowPlaying({ track, onPlay, bgmActive = false }) {
               href={track.external}
               target="_blank"
               rel="noreferrer"
-              className="inline-flex items-center justify-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-1.5 text-[10px] font-medium text-zinc-300 transition hover:border-white/20 hover:text-white"
+              className="inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] font-medium text-zinc-300 transition hover:border-white/20 hover:text-white sm:flex-none sm:py-1.5"
             >
               <ExternalLink className="h-3 w-3" />
               Open source
