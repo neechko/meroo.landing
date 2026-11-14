@@ -168,6 +168,26 @@ They must be served through `https://media.discordapp.net/external/<hash>/https/
 
 ---
 
+## Interface sounds
+
+`src/lib/sfx.js` plays real samples from **`public/sfx/`** instead of synthesised tones. The five files are decoded once into `AudioBuffer`s, trimmed to their audible part, gain-matched, and routed through one master gain (85%) with a limiter.
+
+| Voice | Sample | Used by |
+| --- | --- | --- |
+| `tap` | UI click | Generic buttons |
+| `tab` | Page turn | Dialogue box, tutorial advance |
+| `toggle` | Menu click | Music/audio toggles, “start over” |
+| `link` | Confirm tap | External links |
+| `open` / `close` | Page turn / menu click | Modal open and dismiss |
+| `confirm` | Confirm tap | Send, enter, archive open |
+| `chime` | Two pitched taps | Archive button, successful contact |
+| `error` | Two low menu taps | Failed submit |
+| `warp` | Whoosh | “press anywhere” door transition |
+
+Any element can override its voice with `data-sfx="name"`; `data-sfx="silent"` opts out. To rebalance the mix, change `MASTER_VOLUME` in `src/lib/sfx.js` (UI, currently 0.85) and `DEFAULT_VOLUME` / `YT_VOLUME` in `src/lib/bgm.js` (music, currently 75%).
+
+---
+
 ## Customize
 
 Most content lives in **`src/config.js`**:

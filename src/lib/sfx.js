@@ -1,44 +1,64 @@
 /**
- * Small WebAudio sound engine for the HUD.
+ * WebAudio sound engine for the HUD.
  *
- * No audio files: every click is synthesised from a few oscillators, a short
- * filtered-noise transient and a shared "air" delay, which keeps the bundle
- * tiny and lets each interaction have its own small variation.
- *
- * The palette follows the Castorice / computational look rather than generic
- * UI beeps: water-drop taps, muted glass bells, airy portal sweeps and soft
- * low notes. Every voice is tuned to the same A-minor pentatonic family, so
- * buttons pressed in sequence still sound like one instrument, and a short
- * damped delay tail makes them sit in the same space as the ambient track.
+ * The clicks are real samples (in `public/sfx/`) instead of synthesised tones.
+ * They are decoded once into AudioBuffers and played through a single master
+ * chain, which lets quiet source files be lifted to a consistent level and
+ * keeps every interaction on the same volume scale. `data-sfx` overrides the
+ * voice for a specific element.
  */
 
 const STORAGE_KEY = 'meroo.sfx'
 const THROTTLE_MS = 45
+// UI effects sit at 85% of full scale, as requested.
+const MASTER_VOLUME = 0.85
 
-/** One scale for the whole UI: A minor pentatonic, low to high. */
-const NOTE = {
-  A3: 220,
-  Bb3: 233.08,
-  B3: 246.94,
-  E4: 329.63,
-  A4: 440,
-  C5: 523.25,
-  D5: 587.33,
-  E5: 659.25,
-  G5: 783.99,
-  A5: 880,
-  B5: 987.77,
-  C6: 1046.5,
-  E6: 1318.51,
-  G6: 1567.98,
-  A6: 1760,
+/**
+ * `start` / `length` are measured from each file's decoded envelope, so the
+ * dead air before a transient and the inaudible reverb tail are skipped.
+ * `gain` compensates the very different export levels of the recordings so a
+ * click, a page turn and a whoosh all peak around −5 dBFS before the master.
+ */
+const CLIPS = {
+  click: {
+    src: '/sfx/freesound_community-ui-click-97915.mp3',
+    gain: 11.5,
+    start: 0.25,
+    length: 0.11,
+  },
+  confirm: {
+    src: '/sfx/existentialtaco-confirm-tap-394001.mp3',
+    gain: 0.9,
+    start: 0.03,
+    length: 0.45,
+  },
+  menu: {
+    src: '/sfx/skyscraper_seven-click-buttons-ui-menu-sounds-effects-button-8-205394.mp3',
+    gain: 9.7,
+    start: 0.01,
+    length: 0.62,
+  },
+  page: {
+    src: '/sfx/oxidvideos-papernext-page-videogame-sfx-449926.mp3',
+    gain: 2.6,
+    start: 0.01,
+    length: 0.56,
+  },
+  whoosh: {
+    src: '/sfx/ksjsbwuil-whoosh3-481204.mp3',
+    gain: 0.76,
+    start: 0.02,
+    length: 1.15,
+  },
 }
 
 let ctx = null
 let master = null
-let space = null
 let enabled = true
 let lastPlayed = 0
+let buffers = null
+let loading = null
+const active = new Set()
 
 function readEnabled() {
   if (typeof window === 'undefined') return true
@@ -63,288 +83,153 @@ function ensure() {
   }
 
   master = ctx.createGain()
-  master.gain.value = 1
+  master.gain.value = MASTER_VOLUME
 
-  // Cut the sub-rumble laptop speakers cannot reproduce anyway, so the short
-  // voices spend their headroom on the warm 400–1500 Hz band instead.
+  // A limiter is the safety net for stacked clicks (tap + whoosh at the same
+  // moment on the intro); it should never be audible on its own.
   try {
-    const rumble = ctx.createBiquadFilter()
-    rumble.type = 'highpass'
-    rumble.frequency.value = 60
-    master.connect(rumble)
     const limiter = ctx.createDynamicsCompressor()
     limiter.threshold.value = -6
     limiter.knee.value = 6
     limiter.ratio.value = 6
-    limiter.attack.value = 0.004
-    limiter.release.value = 0.2
-    rumble.connect(limiter)
+    limiter.attack.value = 0.003
+    limiter.release.value = 0.18
+    master.connect(limiter)
     limiter.connect(ctx.destination)
   } catch {
-    // Very old engines: play without the safety net rather than going silent.
     master.connect(ctx.destination)
-  }
-
-  // Shared "air": a short damped delay that every voice can send into. It is
-  // what makes a dry oscillator sound like it was played in a quiet hall
-  // instead of inside the speaker.
-  try {
-    space = ctx.createGain()
-    space.gain.value = 1
-    const delay = ctx.createDelay(0.5)
-    delay.delayTime.value = 0.105
-    const damp = ctx.createBiquadFilter()
-    damp.type = 'lowpass'
-    damp.frequency.value = 2400
-    const feedback = ctx.createGain()
-    feedback.gain.value = 0.28
-    const wet = ctx.createGain()
-    wet.gain.value = 0.45
-    space.connect(delay)
-    delay.connect(damp)
-    damp.connect(feedback)
-    feedback.connect(delay)
-    damp.connect(wet)
-    wet.connect(master)
-  } catch {
-    space = null
   }
 
   return ctx
 }
 
-/** Tiny random detune so repeated taps never sound machine-identical. */
-function drift(amount = 18) {
-  return (Math.random() * 2 - 1) * amount
+function loadClips() {
+  if (buffers) return Promise.resolve(buffers)
+  if (loading) return loading
+
+  const context = ensure()
+  if (!context) return Promise.resolve(null)
+
+  loading = Promise.all(
+    Object.entries(CLIPS).map(async ([key, def]) => {
+      try {
+        const response = await fetch(def.src, { cache: 'force-cache' })
+        if (!response.ok) throw new Error(`HTTP ${response.status}`)
+        const data = await response.arrayBuffer()
+        const buffer = await context.decodeAudioData(data)
+        return [key, { buffer }]
+      } catch {
+        // A missing file should never break the interaction; that voice just
+        // stays silent.
+        return null
+      }
+    }),
+  ).then((entries) => {
+    buffers = new Map(entries.filter(Boolean))
+    loading = null
+    return buffers
+  })
+
+  return loading
 }
 
-function route(node, send, pan) {
-  let tail = node
-  if (pan && typeof ctx.createStereoPanner === 'function') {
-    const panner = ctx.createStereoPanner()
-    panner.pan.value = pan
-    tail.connect(panner)
-    tail = panner
-  }
-  tail.connect(master)
-  if (send > 0 && space) {
-    const sendGain = ctx.createGain()
-    sendGain.gain.value = send
-    tail.connect(sendGain)
-    sendGain.connect(space)
-  }
-}
+function playClip(key, { rate = 1, gain = 1, delay = 0, start, length } = {}) {
+  const def = CLIPS[key]
+  if (!def) return
 
-function tone({
-  freq,
-  at = 0,
-  dur = 0.14,
-  gain = 0.1,
-  type = 'sine',
-  glide = 1,
-  lowpass = 0,
-  pan = 0,
-  send = 0.16,
-  attack = 0.007,
-}) {
-  const start = ctx.currentTime + at
-  const osc = ctx.createOscillator()
-  osc.type = type
-  osc.frequency.setValueAtTime(Math.max(30, freq), start)
-  if (glide !== 1) {
-    osc.frequency.exponentialRampToValueAtTime(
-      Math.max(30, freq * glide),
-      start + Math.max(0.02, dur),
-    )
-  }
+  const fire = () => {
+    if (!enabled || !buffers) return
+    const prepared = buffers.get(key)
+    if (!prepared) return
 
-  const amp = ctx.createGain()
-  amp.gain.setValueAtTime(0.0001, start)
-  amp.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), start + attack)
-  amp.gain.exponentialRampToValueAtTime(0.0001, start + dur)
+    const context = ensure()
+    if (!context) return
 
-  let node = osc
-  if (lowpass) {
-    const filter = ctx.createBiquadFilter()
-    filter.type = 'lowpass'
-    filter.frequency.setValueAtTime(lowpass, start)
-    filter.Q.value = 0.6
-    node.connect(filter)
-    node = filter
+    const total = prepared.buffer.duration
+    const offset = Math.min(start ?? def.start ?? 0, Math.max(0, total - 0.02))
+    const keep = Math.min(length ?? def.length ?? total - offset, total - offset)
+    const duration = Math.max(0.03, keep / rate)
+
+    const at = context.currentTime
+    const source = context.createBufferSource()
+    source.buffer = prepared.buffer
+    source.playbackRate.value = rate
+
+    const amp = context.createGain()
+    const level = def.gain * gain
+    amp.gain.value = level
+
+    source.connect(amp)
+    amp.connect(master)
+
+    source.start(at, offset)
+    source.stop(at + duration + 0.02)
+
+    // Short fade so a trimmed recording never ends on a hard edge.
+    const end = at + duration
+    amp.gain.setValueAtTime(level, Math.max(at, end - 0.03))
+    amp.gain.exponentialRampToValueAtTime(0.0001, end)
+
+    active.add(source)
+    source.onended = () => active.delete(source)
   }
 
-  node.connect(amp)
-  route(amp, send, pan)
-  osc.start(start)
-  osc.stop(start + dur + 0.03)
-}
-
-/** Short filtered noise burst — the "contact" part of a click. */
-function tick({ at = 0, dur = 0.03, gain = 0.03, freq = 2400, q = 1, pan = 0, send = 0.1 }) {
-  const start = ctx.currentTime + at
-  const length = Math.max(1, Math.floor(ctx.sampleRate * dur))
-  const buffer = ctx.createBuffer(1, length, ctx.sampleRate)
-  const data = buffer.getChannelData(0)
-  for (let index = 0; index < length; index += 1) {
-    data[index] = (Math.random() * 2 - 1) * (1 - index / length)
-  }
-
-  const source = ctx.createBufferSource()
-  source.buffer = buffer
-
-  const filter = ctx.createBiquadFilter()
-  filter.type = 'bandpass'
-  filter.frequency.value = freq
-  filter.Q.value = q
-
-  const amp = ctx.createGain()
-  amp.gain.setValueAtTime(gain, start)
-  amp.gain.exponentialRampToValueAtTime(0.0001, start + dur)
-
-  source.connect(filter)
-  filter.connect(amp)
-  route(amp, send, pan)
-
-  source.start(start)
-  source.stop(start + dur + 0.01)
-}
-
-/** Airy rise-and-fall noise, used by the portal-like open/close voices. */
-function swell({
-  at = 0,
-  dur = 0.32,
-  gain = 0.05,
-  from = 500,
-  to = 2400,
-  q = 0.9,
-  pan = 0,
-  send = 0.3,
-}) {
-  const start = ctx.currentTime + at
-  const length = Math.max(1, Math.floor(ctx.sampleRate * dur))
-  const buffer = ctx.createBuffer(1, length, ctx.sampleRate)
-  const data = buffer.getChannelData(0)
-  for (let index = 0; index < length; index += 1) {
-    data[index] = Math.random() * 2 - 1
-  }
-
-  const source = ctx.createBufferSource()
-  source.buffer = buffer
-
-  const filter = ctx.createBiquadFilter()
-  filter.type = 'bandpass'
-  filter.frequency.setValueAtTime(from, start)
-  filter.frequency.exponentialRampToValueAtTime(Math.max(60, to), start + dur * 0.7)
-  filter.Q.value = q
-
-  const amp = ctx.createGain()
-  amp.gain.setValueAtTime(0.0001, start)
-  amp.gain.exponentialRampToValueAtTime(Math.max(0.0002, gain), start + dur * 0.45)
-  amp.gain.exponentialRampToValueAtTime(0.0001, start + dur)
-
-  source.connect(filter)
-  filter.connect(amp)
-  route(amp, send, pan)
-
-  source.start(start)
-  source.stop(start + dur + 0.01)
-}
-
-/** Glass bell: a fundamental plus quiet inharmonic partials that die faster. */
-function bell({ freq, at = 0, dur = 0.5, gain = 0.07, pan = 0, send = 0.4 }) {
-  const partials = [
-    [1, 1, 1],
-    [2.01, 0.4, 0.6],
-    [2.98, 0.18, 0.38],
-    [4.2, 0.08, 0.24],
-  ]
-  for (const [ratio, level, life] of partials) {
-    tone({
-      freq: freq * ratio,
-      at,
-      dur: dur * life,
-      gain: gain * level,
-      type: 'sine',
-      pan,
-      send,
-    })
+  if (delay > 0) {
+    if (typeof window !== 'undefined') window.setTimeout(fire, delay)
+  } else {
+    fire()
   }
 }
 
 const VOICES = {
-  // Water drop: a short upward plink with a warm body underneath.
   tap() {
-    const d = drift(10)
-    tick({ dur: 0.022, gain: 0.035, freq: 3200, q: 0.8, send: 0.12 })
-    tone({ freq: NOTE.E5 + d, dur: 0.085, gain: 0.17, type: 'sine', glide: 1.26, send: 0.24 })
-    tone({ freq: NOTE.A4 + d * 0.5, dur: 0.13, gain: 0.075, type: 'triangle', lowpass: 1600, send: 0.12 })
+    playClip('click')
   },
 
-  // Tab: softer, higher and shorter than a tap so switching feels lighter.
   tab() {
-    const d = drift(8)
-    tick({ dur: 0.02, gain: 0.028, freq: 2600, q: 0.9, send: 0.1 })
-    tone({ freq: NOTE.C5 + d, dur: 0.09, gain: 0.115, type: 'triangle', glide: 1.06, lowpass: 2400, send: 0.18 })
-    tone({ freq: NOTE.G5 + d, at: 0.018, dur: 0.09, gain: 0.036, type: 'sine', pan: 0.1, send: 0.24 })
+    playClip('page', { gain: 0.85 })
   },
 
-  // Toggle: a rising fifth, like a small latch closing.
   toggle() {
-    const d = drift(6)
-    tick({ dur: 0.018, gain: 0.022, freq: 3400, q: 1.1, send: 0.1 })
-    tone({ freq: NOTE.E5 + d, dur: 0.1, gain: 0.12, type: 'triangle', lowpass: 2800, send: 0.18 })
-    tone({ freq: NOTE.B5 + d, at: 0.055, dur: 0.18, gain: 0.07, type: 'sine', pan: -0.08, send: 0.3 })
+    playClip('menu', { gain: 0.9 })
   },
 
-  // Link: a light glass pair, quieter so outbound links do not shout.
   link() {
-    const d = drift(6)
-    tone({ freq: NOTE.C6 + d, dur: 0.22, gain: 0.06, type: 'sine', send: 0.34 })
-    tone({ freq: NOTE.G6 + d, at: 0.02, dur: 0.16, gain: 0.028, type: 'sine', pan: 0.16, send: 0.32 })
-    tone({ freq: NOTE.C5 + d * 0.5, dur: 0.16, gain: 0.04, type: 'triangle', lowpass: 2000, send: 0.16 })
+    playClip('confirm', { gain: 0.6, rate: 1.08 })
   },
 
-  // Open: air rushing outward, then a low pad blooming into a glass fifth.
   open() {
-    swell({ dur: 0.34, gain: 0.045, from: 500, to: 2600, send: 0.3 })
-    tone({ freq: NOTE.A4, dur: 0.42, gain: 0.075, type: 'triangle', glide: 1.5, lowpass: 1500, send: 0.22 })
-    tone({ freq: NOTE.E5, at: 0.07, dur: 0.36, gain: 0.052, type: 'sine', glide: 1.5, send: 0.4 })
-    tone({ freq: NOTE.E6, at: 0.16, dur: 0.3, gain: 0.022, type: 'sine', pan: 0.22, send: 0.45 })
+    playClip('page', { gain: 1, rate: 0.94 })
   },
 
-  // Close: the same air folding back down into a low, quiet landing.
   close() {
-    tone({ freq: NOTE.E5, dur: 0.28, gain: 0.07, type: 'triangle', glide: 0.7, lowpass: 1400, send: 0.28 })
-    tone({ freq: NOTE.A4, at: 0.035, dur: 0.24, gain: 0.045, type: 'sine', glide: 0.72, send: 0.2 })
-    tick({ dur: 0.05, gain: 0.026, freq: 1100, q: 0.7, send: 0.12 })
+    playClip('menu', { gain: 0.8, rate: 0.88 })
   },
 
-  // Confirm: a low seal plus a rising pentatonic phrase — "accepted", calm.
   confirm() {
-    tone({ freq: NOTE.A3, dur: 0.2, gain: 0.06, type: 'sine', lowpass: 500, send: 0.08 })
-    tone({ freq: NOTE.C5, at: 0.01, dur: 0.14, gain: 0.075, type: 'triangle', lowpass: 2600, send: 0.24 })
-    tone({ freq: NOTE.E5, at: 0.075, dur: 0.18, gain: 0.07, type: 'triangle', lowpass: 2600, send: 0.28 })
-    tone({ freq: NOTE.A5, at: 0.145, dur: 0.34, gain: 0.055, type: 'sine', pan: 0.06, send: 0.4 })
+    playClip('confirm')
   },
 
-  // Chime: a real glass bell with a long tail, saved for the archive.
   chime() {
-    bell({ freq: NOTE.A5, dur: 0.55, gain: 0.065, send: 0.42 })
-    bell({ freq: NOTE.E6, at: 0.02, dur: 0.42, gain: 0.032, send: 0.4 })
-    tone({ freq: NOTE.A4, dur: 0.5, gain: 0.032, type: 'sine', send: 0.2 })
+    playClip('confirm', { gain: 0.8 })
+    playClip('confirm', { gain: 0.45, rate: 1.35, delay: 70 })
   },
 
-  // Error: muted low semitone beating, uneasy but never harsh.
   error() {
-    tone({ freq: NOTE.Bb3, dur: 0.24, gain: 0.08, type: 'triangle', lowpass: 620, send: 0.12 })
-    tone({ freq: NOTE.B3, at: 0.012, dur: 0.22, gain: 0.042, type: 'sine', lowpass: 520, send: 0.12 })
-    tone({ freq: 116.54, at: 0.01, dur: 0.28, gain: 0.045, type: 'sine', lowpass: 320, send: 0.05 })
+    playClip('menu', { gain: 0.85, rate: 0.76 })
+    playClip('menu', { gain: 0.6, rate: 0.62, delay: 90 })
+  },
+
+  // The door: one long airy sweep when "press anywhere" starts the warp.
+  warp() {
+    playClip('whoosh')
   },
 }
 
 export function playSfx(name = 'tap') {
   if (!enabled) return
   if (typeof window === 'undefined') return
+  if (name === 'none' || name === 'silent') return
   if (typeof performance !== 'undefined' && performance.now() - lastPlayed < THROTTLE_MS) return
 
   const voice = VOICES[name] ?? VOICES.tap
@@ -353,26 +238,56 @@ export function playSfx(name = 'tap') {
 
   lastPlayed = typeof performance !== 'undefined' ? performance.now() : Date.now()
 
-  const fire = () => {
+  if (!buffers) {
+    // First interaction can land before the tiny mp3s finish decoding; play it
+    // once they are ready instead of dropping the very first click.
+    loadClips()?.then(() => {
+      if (enabled) {
+        try {
+          voice()
+        } catch {
+          // Never break the interaction.
+        }
+      }
+    })
+    return
+  }
+
+  // Resume in case the browser suspended the context; samples scheduled while
+  // suspended would otherwise land in the past.
+  if (context.state === 'running') {
     try {
       voice()
     } catch {
-      // A missing AudioContext feature should never break the interaction.
+      // Never break the interaction.
     }
-  }
-
-  // Scheduling a short envelope while the context is still suspended can make
-  // the whole sound land in the past by the time audio starts. Wait for the
-  // resume so the very first click is audible too.
-  if (context.state === 'running') {
-    fire()
   } else {
-    context.resume().then(fire).catch(() => {})
+    context
+      .resume()
+      .then(() => {
+        if (!enabled) return
+        try {
+          voice()
+        } catch {
+          // Never break the interaction.
+        }
+      })
+      .catch(() => {})
   }
 }
 
 export function setSfxEnabled(value) {
   enabled = Boolean(value)
+  if (!enabled) {
+    for (const source of active) {
+      try {
+        source.stop()
+      } catch {
+        // Already stopped.
+      }
+    }
+    active.clear()
+  }
   if (typeof window === 'undefined') return
   try {
     if (enabled) window.localStorage.removeItem(STORAGE_KEY)
@@ -422,6 +337,10 @@ export function installSfx() {
   if (typeof document === 'undefined') return () => {}
   enabled = readEnabled()
 
+  // Decode the samples while the preloader is still on screen, so the first
+  // click already has a buffer to play.
+  loadClips()
+
   // Any first gesture unlocks the context, even when the user clicks empty
   // space. That way the very next button press is already running.
   const unlock = () => {
@@ -440,9 +359,9 @@ export function installSfx() {
   const onKeyDown = (event) => {
     if (event.key !== 'Enter' && event.key !== ' ') return
     unlock()
-    const active = document.activeElement
-    if (!(active instanceof Element) || !active.matches(INTERACTIVE)) return
-    playSfx(resolveSound(active))
+    const activeElement = document.activeElement
+    if (!(activeElement instanceof Element) || !activeElement.matches(INTERACTIVE)) return
+    playSfx(resolveSound(activeElement))
   }
 
   document.addEventListener('pointerdown', onPointerDown, { capture: true, passive: true })

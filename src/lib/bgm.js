@@ -18,9 +18,10 @@ import { useEffect, useState } from 'react'
  */
 
 const DEFAULT_URL = '/music/castorice-epitaph.mp3'
-// The old level was 0.34; this is ~60% quieter while staying audible.
-const DEFAULT_VOLUME = 0.14
-const YT_VOLUME = 14
+// Music sits at 75% of full scale; the UI samples run through their own 85%
+// master, so the effects still cut through the track.
+const DEFAULT_VOLUME = 0.75
+const YT_VOLUME = 75
 const YT_API_TIMEOUT = 12_000
 const YT_READY_TIMEOUT = 9_000
 

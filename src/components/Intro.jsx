@@ -2,6 +2,7 @@ import { AnimatePresence, motion, useReducedMotion } from 'framer-motion'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { site } from '../config'
 import { startBgm } from '../lib/bgm'
+import { playSfx } from '../lib/sfx'
 import { usePointerParallax } from '../lib/usePointerParallax'
 
 const WORDS = [
@@ -72,6 +73,9 @@ export default function Intro({ onEnter }) {
       finish()
       return
     }
+    // Keyboard wake has no pointerdown to borrow a click from; the pointer path
+    // already played the stage sound and this one is throttled away.
+    playSfx('tap')
     setPhase('waking')
   }, [phase, warping, reduced, finish])
 
@@ -87,6 +91,7 @@ export default function Intro({ onEnter }) {
     }
     // The click itself unlocks audio; the delayed onEnter only swaps screens.
     startBgm()
+    playSfx('warp')
     setWarping(true)
     timerRef.current = window.setTimeout(finish, 1050)
   }, [warping, phase, wake, reduced, finish])
@@ -135,7 +140,7 @@ export default function Intro({ onEnter }) {
     >
       <div
         className={`intro-stage absolute inset-0 is-${phase} ${warping ? 'is-warping' : ''}`}
-        data-sfx="confirm"
+        data-sfx={phase === 'ready' && !reduced ? 'silent' : 'confirm'}
         onClick={
           phase === 'dormant' ? wake : phase === 'ready' ? enter : undefined
         }
@@ -286,6 +291,7 @@ export default function Intro({ onEnter }) {
                         enter()
                       }}
                       disabled={warping}
+                      data-sfx={reduced ? 'confirm' : 'silent'}
                       className="intro-prompt"
                       aria-label="Enter"
                     >
