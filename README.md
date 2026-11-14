@@ -32,12 +32,13 @@ npm run dev
 Open <http://localhost:5173>.
 
 ```bash
-npm run build     # production bundle
+npm run build     # typecheck the API, then build the bundle
 npm run preview   # preview the bundle
+npm run typecheck # tsc --noEmit for api/*.ts
 npm run lint      # oxlint
 ```
 
-`vite.config.js` includes a tiny adapter that runs `api/contact.js` and `api/mal.js` during `npm run dev`, so the form and the anime list work locally without the Vercel CLI.
+The backend routes in `api/` are written in TypeScript. `vite.config.js` includes a tiny adapter that runs `api/contact.ts` and `api/mal.ts` (plus the other routes) during `npm run dev`, so the form and the anime list work locally without the Vercel CLI.
 
 ---
 
@@ -107,7 +108,7 @@ Edit the username, limit, and featured order in **`src/config.js`**. Hand-writte
 
 ## MyAnimeList sync
 
-MyAnimeList does not send CORS headers on its list endpoint, so the browser cannot read it directly. `api/mal.js` fetches:
+MyAnimeList does not send CORS headers on its list endpoint, so the browser cannot read it directly. `api/mal.ts` fetches:
 
 ```text
 https://myanimelist.net/animelist/meroo__/load.json?offset=0&status=1
@@ -213,7 +214,7 @@ The Castorice artwork is fan-art usage. Check the original artist's terms before
    - Optional: `MAL_USERNAME`
 5. Deploy.
 
-`vercel.json` pins the framework, build command, and output directory. The files in `api/` become serverless functions automatically.
+`vercel.json` pins the framework, build command, and output directory. The files in `api/` become serverless functions automatically; Vercel compiles the TypeScript routes on deploy, and `npm run build` typechecks them first.
 
 Any later push to `main` triggers a new deployment. `VITE_` values are read at build time, so redeploy after changing them.
 
@@ -222,9 +223,13 @@ Any later push to `main` triggers a new deployment. `VITE_` values are read at b
 ## Project structure
 
 ```text
-api/
-├─ contact.js                 # POST /api/contact → Discord webhook
-└─ mal.js                     # GET /api/mal → normalized watching list
+api/                          # TypeScript serverless routes (see tsconfig.json)
+├─ _types.ts                  # shared ApiRequest / ApiResponse contract
+├─ contact.ts                 # POST /api/contact → Discord webhook
+├─ lanyard.ts                 # GET /api/lanyard → same-origin presence proxy
+├─ mal.ts                     # GET /api/mal → normalized watching list
+├─ views.ts                   # GET /api/views → live view counter
+└─ app-icon.ts                # GET /api/app-icon → Discord game icons
 
 src/
 ├─ config.js                  # persona, links, GitHub/MAL/contact settings

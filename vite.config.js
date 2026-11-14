@@ -1,11 +1,11 @@
 import tailwindcss from '@tailwindcss/vite'
 import react from '@vitejs/plugin-react'
 import { defineConfig, loadEnv } from 'vite'
-import contact from './api/contact.js'
-import lanyard from './api/lanyard.js'
-import mal from './api/mal.js'
-import views from './api/views.js'
-import appIcon from './api/app-icon.js'
+import contact from './api/contact.ts'
+import lanyard from './api/lanyard.ts'
+import mal from './api/mal.ts'
+import views from './api/views.ts'
+import appIcon from './api/app-icon.ts'
 
 const API_ROUTES = {
   '/api/contact': contact,

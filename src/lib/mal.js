@@ -4,7 +4,7 @@ const REFRESH_MS = 5 * 60 * 1000
 const RETRY_MS = 6000
 
 /**
- * "Currently watching" from MyAnimeList through the small proxy in api/mal.js.
+ * "Currently watching" from MyAnimeList through the small proxy in api/mal.ts.
  * Refreshes every five minutes while the tab is visible, and on demand.
  */
 export function useMalList(username, { limit = 6 } = {}) {

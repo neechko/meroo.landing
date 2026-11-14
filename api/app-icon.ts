@@ -9,13 +9,15 @@
  * the requested IDs before it reaches the browser.
  */
 
+import type { ApiRequest, ApiResponse } from './_types.ts'
+
 const DETECTABLE = 'https://discord.com/api/v10/applications/detectable'
 const CACHE_MS = 6 * 60 * 60 * 1000
 const MAX_IDS = 12
 
 // A small built-in map so the common cases answer instantly, even on a cold
 // function or when Discord's list endpoint is unavailable.
-const KNOWN = {
+const KNOWN: Record<string, string> = {
   '762434991303950386': '0a7cc00267310bf4afdd78b175a7aeea', // Genshin Impact
   '1121201675240210523': '444d067889922e42b0af99b13e5d5c72', // Honkai: Star Rail
   '1124351937098301590': 'eb88c509a5ab7dc61085e95df1716a99', // Honkai Impact 3rd
@@ -39,13 +41,18 @@ const KNOWN = {
   '356877880938070016': 'a74899a5190c48a3e6ce9f8d2eaff348', // Rocket League
 }
 
-let cache = { map: null, at: 0 }
+interface DetectableCache {
+  map: Map<string, string> | null
+  at: number
+}
 
-function iconUrl(applicationId, hash, size = 128) {
+let cache: DetectableCache = { map: null, at: 0 }
+
+function iconUrl(applicationId: string, hash: string, size = 128): string {
   return `https://cdn.discordapp.com/app-icons/${applicationId}/${hash}.png?size=${size}`
 }
 
-async function loadDetectable() {
+async function loadDetectable(): Promise<Map<string, string>> {
   if (cache.map && Date.now() - cache.at < CACHE_MS) return cache.map
 
   const response = await fetch(DETECTABLE, {
@@ -54,12 +61,13 @@ async function loadDetectable() {
   })
   if (!response.ok) throw new Error(`Discord returned HTTP ${response.status}`)
 
-  const list = await response.json()
+  const list: unknown = await response.json()
   if (!Array.isArray(list)) throw new Error('Unexpected detectable list')
 
-  const map = new Map()
-  for (const app of list) {
-    if (app?.id && app?.icon_hash) map.set(String(app.id), app.icon_hash)
+  const map = new Map<string, string>()
+  for (const entry of list) {
+    const app = entry as { id?: unknown; icon_hash?: unknown }
+    if (app?.id && app?.icon_hash) map.set(String(app.id), String(app.icon_hash))
   }
 
   cache = { map, at: Date.now() }
@@ -68,7 +76,7 @@ async function loadDetectable() {
 
 export const config = { maxDuration: 30 }
 
-export default async function handler(req, res) {
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   res.setHeader('Cache-Control', 'public, s-maxage=86400, stale-while-revalidate=604800')
 
   if (req.method !== 'GET') {
@@ -76,7 +84,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed.' })
   }
 
-  const ids = String(req.query?.ids ?? '')
+  const rawIds = req.query?.ids
+  const ids = (Array.isArray(rawIds) ? rawIds.join(',') : String(rawIds ?? ''))
     .split(',')
     .map((id) => id.trim())
     .filter((id) => /^\d{15,25}$/.test(id))
@@ -84,9 +93,10 @@ export default async function handler(req, res) {
 
   if (!ids.length) return res.status(200).json({ icons: {} })
 
-  const icons = {}
+  const icons: Record<string, string> = {}
   ids.forEach((id) => {
-    if (KNOWN[id]) icons[id] = iconUrl(id, KNOWN[id])
+    const known = KNOWN[id]
+    if (known) icons[id] = iconUrl(id, known)
   })
 
   const missing = ids.filter((id) => !icons[id])

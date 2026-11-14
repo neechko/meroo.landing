@@ -6,17 +6,20 @@
  * for local development) and never prefix it with VITE_.
  */
 
+import type { ApiRequest, ApiResponse } from './_types.ts'
+
 const RATE_WINDOW = 10 * 60 * 1000
 const RATE_LIMIT = 5
-const hits = new Map()
+const hits = new Map<string, number[]>()
 
-function clientIp(req) {
+function clientIp(req: ApiRequest): string {
   const forwarded = req.headers['x-forwarded-for']
-  if (typeof forwarded === 'string' && forwarded.length) return forwarded.split(',')[0].trim()
+  const value = Array.isArray(forwarded) ? forwarded[0] : forwarded
+  if (typeof value === 'string' && value.length) return value.split(',')[0].trim()
   return req.socket?.remoteAddress ?? 'unknown'
 }
 
-function limited(ip) {
+function limited(ip: string): boolean {
   const now = Date.now()
   const recent = (hits.get(ip) ?? []).filter((stamp) => now - stamp < RATE_WINDOW)
   recent.push(now)
@@ -29,12 +32,18 @@ function limited(ip) {
   return recent.length > RATE_LIMIT
 }
 
-function clean(value, max) {
+function clean(value: unknown, max: number): string {
   if (typeof value !== 'string') return ''
   return value.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/g, '').trim().slice(0, max)
 }
 
-export default async function handler(req, res) {
+interface EmbedField {
+  name: string
+  value: string
+  inline: boolean
+}
+
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   res.setHeader('Cache-Control', 'no-store')
 
   const webhook = (process.env.DISCORD_WEBHOOK_URL ?? '').trim()
@@ -63,7 +72,7 @@ export default async function handler(req, res) {
     return res.status(500).json({ error: 'DISCORD_WEBHOOK_URL does not look like a Discord webhook.' })
   }
 
-  const body = req.body ?? {}
+  const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>
   if (clean(body.website, 80)) {
     // Honeypot filled by a bot: pretend everything worked.
     return res.status(200).json({ ok: true })
@@ -80,7 +89,7 @@ export default async function handler(req, res) {
   if (name.length < 2) return res.status(400).json({ error: 'Please add a name.' })
   if (message.length < 5) return res.status(400).json({ error: 'Please write a slightly longer message.' })
 
-  const fields = [
+  const fields: EmbedField[] = [
     { name: 'Name', value: name, inline: true },
     ...(contact ? [{ name: 'Contact', value: contact, inline: true }] : []),
     { name: 'Message', value: message, inline: false },

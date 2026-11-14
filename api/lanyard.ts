@@ -10,10 +10,12 @@
  * to polling this endpoint when the socket cannot be established.
  */
 
+import type { ApiRequest, ApiResponse } from './_types.ts'
+
 const LANYARD_URL = 'https://api.lanyard.rest/v1/users'
 const USER_ID = /^\d{17,20}$/
 
-export default async function handler(req, res) {
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   res.setHeader('Cache-Control', 'public, s-maxage=10, stale-while-revalidate=10')
 
   if (req.method !== 'GET') {

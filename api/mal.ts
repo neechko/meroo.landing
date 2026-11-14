@@ -7,11 +7,45 @@
  * couple of minutes. The username can also come from MAL_USERNAME.
  */
 
+import type { ApiRequest, ApiResponse } from './_types.ts'
+
 const MAL_BASE = 'https://myanimelist.net/animelist'
 const REVALIDATE = 120
 
-function normalize(entry) {
-  const genres = Array.isArray(entry.genres) ? entry.genres.map((genre) => genre.name).filter(Boolean) : []
+interface MalEntry {
+  anime_id?: number
+  anime_title?: string
+  anime_title_eng?: string
+  anime_image_path?: string
+  image_url?: string
+  num_watched_episodes?: number
+  anime_num_episodes?: number
+  score?: number
+  anime_media_type_string?: string
+  anime_airing_status?: number
+  genres?: Array<{ name?: string }>
+  updated_at?: number
+  anime_url?: string
+}
+
+interface NormalizedEntry {
+  id: number | undefined
+  title: string
+  image: string
+  watched: number
+  total: number
+  score: number
+  type: string
+  airing: boolean
+  genres: string[]
+  updatedAt: number
+  url: string
+}
+
+function normalize(entry: MalEntry): NormalizedEntry {
+  const genres = Array.isArray(entry.genres)
+    ? entry.genres.map((genre) => genre.name).filter((name): name is string => Boolean(name))
+    : []
   const title = (entry.anime_title_eng || entry.anime_title || 'Untitled').trim()
 
   return {
@@ -29,7 +63,11 @@ function normalize(entry) {
   }
 }
 
-export default async function handler(req, res) {
+function firstQueryValue(value: string | string[] | undefined): string {
+  return Array.isArray(value) ? (value[0] ?? '') : (value ?? '')
+}
+
+export default async function handler(req: ApiRequest, res: ApiResponse) {
   res.setHeader('Cache-Control', `public, s-maxage=${REVALIDATE}, stale-while-revalidate=600`)
 
   if (req.method !== 'GET') {
@@ -37,8 +75,8 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed.' })
   }
 
-  const username = String(req.query?.username ?? process.env.MAL_USERNAME ?? '').trim()
-  const limit = Math.min(12, Math.max(1, Number.parseInt(req.query?.limit, 10) || 6))
+  const username = firstQueryValue(req.query?.username).trim() || (process.env.MAL_USERNAME ?? '').trim()
+  const limit = Math.min(12, Math.max(1, Number.parseInt(firstQueryValue(req.query?.limit), 10) || 6))
 
   if (!/^[A-Za-z0-9_-]{2,32}$/.test(username)) {
     return res.status(400).json({
@@ -66,12 +104,12 @@ export default async function handler(req, res) {
       return res.status(502).json({ error: `MyAnimeList returned HTTP ${response.status}.` })
     }
 
-    const data = await response.json()
+    const data: unknown = await response.json()
     if (!Array.isArray(data)) {
       return res.status(502).json({ error: 'MyAnimeList returned an unexpected response.' })
     }
 
-    const entries = data
+    const entries = (data as MalEntry[])
       .map(normalize)
       .sort((a, b) => b.updatedAt - a.updatedAt)
       .slice(0, limit)
@@ -84,7 +122,7 @@ export default async function handler(req, res) {
     })
   } catch (error) {
     const message =
-      error?.name === 'TimeoutError'
+      error instanceof Error && error.name === 'TimeoutError'
         ? 'MyAnimeList took too long to answer.'
         : 'Could not reach MyAnimeList.'
     return res.status(502).json({ error: message })
