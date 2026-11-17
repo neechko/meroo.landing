@@ -80,7 +80,7 @@ export default async function handler(req: ApiRequest, res: ApiResponse) {
 
   if (!/^[A-Za-z0-9_-]{2,32}$/.test(username)) {
     return res.status(400).json({
-      error: 'No MyAnimeList username configured. Add one in src/config.js or set MAL_USERNAME.',
+      error: 'No MyAnimeList username configured. Add one in src/config.ts or set MAL_USERNAME.',
     })
   }
 

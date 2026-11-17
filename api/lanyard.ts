@@ -6,8 +6,9 @@
  * though the site itself loads fine. Routing the request through the deployment
  * makes presence work there too, and also gives us a place to cache briefly.
  *
- * The WebSocket still connects directly on the client; `useLanyard` falls back
- * to polling this endpoint when the socket cannot be established.
+ * The WebSocket still connects directly on the client, but only when this proxy
+ * is unavailable (for example on a static host). When the proxy answers, the
+ * client polls it and never touches `api.lanyard.rest` from the browser.
  */
 
 import type { ApiRequest, ApiResponse } from './_types.ts'

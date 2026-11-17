@@ -10,7 +10,7 @@ be played instead of the procedural preset with the same name.
 | Name   | When it plays                                      |
 | ------ | -------------------------------------------------- |
 | `idle` | always. This is the standing idle the archive uses. |
-| `rest` | debug only — returns the arms to the bind A-pose.   |
+| `rest` | debug only: returns the arms to the bind A-pose. |
 
 The dialogue no longer changes the body pose. Any other name is still loadable
 through `playClip(name)` on the scene API, it just is not triggered on its own.
@@ -25,12 +25,12 @@ through `playClip(name)` on the scene API, it just is not triggered on its own.
 }
 ```
 
-- `name` — key the viewer uses. Use `idle` to replace the procedural idle.
-- `file` — file name inside this folder (relative paths work too).
-- `loop` — defaults to `true`. Keep the idle looping; one-shot clips stop and
+- `name`: key the viewer uses. Use `idle` to replace the procedural idle.
+- `file`: file name inside this folder (relative paths work too).
+- `loop`: defaults to `true`. Keep the idle looping; one-shot clips stop and
   hold their last frame until the next pose.
-- `fade` — crossfade in seconds, defaults to `0.35`.
-- `clip` — optional animation name inside the `.glb` when the file contains
+- `fade`: crossfade in seconds, defaults to `0.35`.
+- `clip`: optional animation name inside the `.glb` when the file contains
   more than one. The first animation is used otherwise.
 
 If the manifest is missing, empty, or a file fails to load, the procedural pose
@@ -44,7 +44,7 @@ keeps working and the console logs a warning. Nothing breaks.
    `Scapula_* → Shoulder_* → Elbow_* → Wrist_*` and the finger chains
    (`Index/Middle/Pinky/Ring/ThumbFinger{1,2,3}_{L,R}_*`).
    Do not move `Root_M_01`, `Hip_*`, `Knee_*` or the legs unless you also
-   re-frame the camera — the archive crop is a portrait.
+   re-frame the camera: the archive crop is a portrait.
 3. Name the action `idle` (or any key you will use with `playClip`). In Blender
    the action is the animation clip name.
 4. Frame rate 30 fps. Start at frame 1. Make it loop seamlessly: the last pose
@@ -55,7 +55,7 @@ keeps working and the console logs a warning. Nothing breaks.
    - Animation: enabled, `Animation Mode: Actions`
    - Skinning: enabled
 6. Drop the `.glb` in this folder and add its manifest entry. Reload the page
-   and open the archive — `canvas.dataset.bodyClips` in devtools tells you how
+   and open the archive. `canvas.dataset.bodyClips` in devtools tells you how
    many clips were registered, and `canvas.dataset.bodyClip` shows the one
    currently playing.
 

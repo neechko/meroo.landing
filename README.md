@@ -8,15 +8,15 @@ Built with **Vite + React + Tailwind CSS**, animated with **Framer Motion**, pre
 
 ## What is on the screen
 
-- **Intro gate** — a full-screen “enter” moment with a slow image pan and a warp transition. The click also counts as a user gesture, so music embeds can play later.
-- **Profile panel** — avatar, Discord status, short bio, skills, and links to GitHub, Discord, MyAnimeList, and the website.
-- **Live signal** — realtime Discord presence over WebSocket, custom status, open apps, active devices, and now playing.
-- **Things I've built** — public repositories pulled from the GitHub API at runtime, with curated notes and a 10-minute session cache.
-- **Now watching** — the public MyAnimeList “watching” list through a small serverless proxy, refreshed every five minutes or on demand.
-- **Music player** — Discord only shares metadata. Spotify tracks open in a Spotify embed, YouTube Music links open in a YouTube embed, and anything else falls back to the original link.
-- **Contact** — a real form that posts to `/api/contact` and forwards the message to a Discord webhook.
-- **No page scroll** — the whole experience is `100dvh`. Desktop uses a three-column HUD; phones get four bottom tabs (Activity, GitHub, Anime, Profile) with internal panel scrolling only.
-- **Mouse effects** — custom dot + lagging ring + comet trail + click ripple, plus a particle constellation and a soft pointer glow in the background.
+- **Intro gate**: a full-screen “enter” moment with a slow image pan and a warp transition. The click also counts as a user gesture, so music embeds can play later.
+- **Profile panel**: avatar, Discord status, short bio, skills, and links to GitHub, Discord, MyAnimeList, and the website.
+- **Live signal**: realtime Discord presence over WebSocket, custom status, open apps, active devices, and now playing.
+- **Things I've built**: public repositories pulled from the GitHub API at runtime, with curated notes and a 10-minute session cache.
+- **Now watching**: the public MyAnimeList “watching” list through a small serverless proxy, refreshed every five minutes or on demand.
+- **Music player**: Discord only shares metadata. Spotify tracks open in a Spotify embed, YouTube Music links open in a YouTube embed, and anything else falls back to the original link.
+- **Contact**: a real form that posts to `/api/contact` and forwards the message to a Discord webhook.
+- **No page scroll**: the whole experience is `100dvh`. Desktop uses a three-column HUD; phones get four bottom tabs (Activity, GitHub, Anime, Profile) with internal panel scrolling only.
+- **Mouse effects**: a lagging ring, a comet trail and a click ripple, plus a particle constellation and a soft pointer glow in the background.
 
 All interface copy is in English.
 
@@ -29,16 +29,16 @@ npm install
 npm run dev
 ```
 
-Open <http://localhost:5173>.
+Open <http://localhost:5173>. Use the `localhost` name, not `http://127.0.0.1:5173`: YouTube returns error 150 for every embed when the page origin is an IP literal, so the Discord BGM would fall back to the local track. The dev server redirects loopback IP visitors to `localhost` automatically.
 
 ```bash
-npm run build     # typecheck the API, then build the bundle
+npm run build     # typecheck the whole project, then build the bundle
 npm run preview   # preview the bundle
-npm run typecheck # tsc --noEmit for api/*.ts
+npm run typecheck # tsc --noEmit for src/ and api/
 npm run lint      # oxlint
 ```
 
-The backend routes in `api/` are written in TypeScript. `vite.config.js` includes a tiny adapter that runs `api/contact.ts` and `api/mal.ts` (plus the other routes) during `npm run dev`, so the form and the anime list work locally without the Vercel CLI.
+The frontend and the backend routes in `api/` are both written in TypeScript. `vite.config.ts` includes a tiny adapter that runs `api/contact.ts` and `api/mal.ts` (plus the other routes) during `npm run dev`, so the form and the anime list work locally without the Vercel CLI.
 
 ---
 
@@ -55,7 +55,7 @@ Copy-Item .env.example .env.local
 | `VITE_DISCORD_USER_ID` | For live presence | Client | Your Discord user ID. Leave empty for the honest offline state. |
 | `VITE_DEMO_FALLBACK` | No | Client | Local development only. `false` disables preview presence data. |
 | `DISCORD_WEBHOOK_URL` | For contact | **Server only** | Discord webhook used by `/api/contact`. Never prefix with `VITE_`. |
-| `MAL_USERNAME` | No | Server | Overrides the MyAnimeList username from `src/config.js`. |
+| `MAL_USERNAME` | No | Server | Overrides the MyAnimeList username from `src/config.ts`. |
 
 Only `VITE_` values are bundled into the browser. Keep the webhook URL on the server.
 
@@ -88,7 +88,7 @@ VITE_DEMO_FALLBACK=false
 
 ## GitHub sync
 
-`src/lib/github.js` fetches:
+`src/lib/github.ts` fetches:
 
 ```text
 https://api.github.com/users/neechko/repos?per_page=100&sort=pushed
@@ -100,7 +100,7 @@ https://api.github.com/users/neechko/repos?per_page=100&sort=pushed
 - Results are cached in `sessionStorage` for 10 minutes. The refresh button bypasses the cache.
 - If GitHub is unreachable or rate-limited, the curated `site.projects` list is shown instead.
 
-Edit the username, limit, and featured order in **`src/config.js`**. Hand-written descriptions live in `site.projectNotes`.
+Edit the username, limit, and featured order in **`src/config.ts`**. Hand-written descriptions live in `site.projectNotes`.
 
 > The public GitHub API allows 60 requests per hour per IP. The cache keeps a normal visit to one request.
 
@@ -117,7 +117,7 @@ https://myanimelist.net/animelist/meroo__/load.json?offset=0&status=1
 and returns a small normalized list. The client refreshes it every five minutes while the tab is visible, and there is a manual refresh button.
 
 - The list must be **public**.
-- The username is `site.myanimelist.username` in `src/config.js`, or `MAL_USERNAME` on the server.
+- The username is `site.myanimelist.username` in `src/config.ts`, or `MAL_USERNAME` on the server.
 - Covers are served from `cdn.myanimelist.net`.
 
 ---
@@ -164,13 +164,19 @@ Discord external activity assets look like:
 mp:external/<hash>/https/<host>/<path>
 ```
 
-They must be served through `https://media.discordapp.net/external/<hash>/https/<host>/<path>`. Omitting `/external/` returns `401`. `activityImage()` in `src/lib/format.js` handles this, which is why YouTube Music covers now appear.
+They must be served through `https://media.discordapp.net/external/<hash>/https/<host>/<path>`. Omitting `/external/` returns `401`. `activityImage()` in `src/lib/format.ts` handles this, which is why YouTube Music covers now appear.
+
+### Background music
+
+The site plays the local Castorice track at **80%** volume while Discord is offline or not playing music. As soon as Lanyard reports a YouTube track, that song replaces the local track as the BGM (audio only, the video stays hidden). UI effects run at **60%** so they stay audible over the music.
+
+Some videos disable embedding on YouTube's side (the player returns error 150). When that happens the HUD switches to the local Castorice track so the site is never silent, and the music card explains that the Discord song could not be embedded. A "Try again" link in that card retries the Discord track.
 
 ---
 
 ## Interface sounds
 
-`src/lib/sfx.js` plays real samples from **`public/sfx/`** instead of synthesised tones. The five files are decoded once into `AudioBuffer`s, trimmed to their audible part, gain-matched, and routed through one master gain (85%) with a limiter.
+`src/lib/sfx.ts` plays real samples from **`public/sfx/`** instead of synthesised tones. The five files are decoded once into `AudioBuffer`s, trimmed to their audible part, gain-matched, and routed through one master gain (60%) with a limiter.
 
 | Voice | Sample | Used by |
 | --- | --- | --- |
@@ -184,13 +190,13 @@ They must be served through `https://media.discordapp.net/external/<hash>/https/
 | `error` | Two low menu taps | Failed submit |
 | `warp` | Whoosh | “press anywhere” door transition |
 
-Any element can override its voice with `data-sfx="name"`; `data-sfx="silent"` opts out. To rebalance the mix, change `MASTER_VOLUME` in `src/lib/sfx.js` (UI, currently 0.85) and `DEFAULT_VOLUME` / `YT_VOLUME` in `src/lib/bgm.js` (music, currently 75%).
+Any element can override its voice with `data-sfx="name"`; `data-sfx="silent"` opts out. To rebalance the mix, change `MASTER_VOLUME` in `src/lib/sfx.ts` (UI, currently 0.6) and `DEFAULT_VOLUME` / `YT_VOLUME` in `src/lib/bgm.ts` (music, currently 80%).
 
 ---
 
 ## Customize
 
-Most content lives in **`src/config.js`**:
+Most content lives in **`src/config.ts`**:
 
 | Field | What it changes |
 | --- | --- |
@@ -252,32 +258,46 @@ api/                          # TypeScript serverless routes (see tsconfig.json)
 └─ app-icon.ts                # GET /api/app-icon → Discord game icons
 
 src/
-├─ config.js                  # persona, links, GitHub/MAL/contact settings
-├─ App.jsx                    # intro + HUD composition
+├─ config.ts                  # persona, links, GitHub/MAL/contact settings
+├─ App.tsx                    # intro + HUD composition
+├─ types.ts                   # shared data contracts
 ├─ index.css                  # theme, HUD chrome, intro/keyframes
 ├─ components/
-│  ├─ Intro.jsx               # enter gate
-│  ├─ Hud.jsx                 # HUD shell, data hooks, mobile tabs
-│  ├─ HudPanel.jsx            # shared panel chrome + header
-│  ├─ ProfilePanel.jsx
-│  ├─ ActivityPanel.jsx       # presence + now playing
-│  ├─ GithubPanel.jsx         # synced repositories
-│  ├─ AnimePanel.jsx          # MyAnimeList watching
-│  ├─ ContactModal.jsx        # real contact form
-│  ├─ MusicPlayer.jsx         # Spotify / YouTube embed
-│  ├─ Background.jsx          # aurora, particles, pointer glow
-│  ├─ Cursor.jsx              # dot, ring, trail, ripple
-│  ├─ presence-parts.jsx      # album art, activity rows, status
-│  ├─ ui.jsx                  # shared bits
-│  └─ icons.jsx               # Discord, Spotify, GitHub icons
+│  ├─ Intro.tsx               # enter gate
+│  ├─ Preloader.tsx           # 10s logo + water fill
+│  ├─ Hud.tsx                 # HUD shell, data hooks, mobile tabs
+│  ├─ HudPanel.tsx            # shared panel chrome + header
+│  ├─ ProfilePanel.tsx
+│  ├─ ActivityPanel.tsx       # presence + now playing
+│  ├─ GithubPanel.tsx         # synced repositories
+│  ├─ AnimePanel.tsx          # MyAnimeList watching
+│  ├─ ContactModal.tsx        # real contact form
+│  ├─ MusicPlayer.tsx         # Spotify / YouTube embed
+│  ├─ CastoriceViewer.tsx     # 3D archive viewer
+│  ├─ Tutorial.tsx            # visual-novel onboarding
+│  ├─ Background.tsx          # aurora, particles, pointer glow
+│  ├─ Cursor.tsx              # dot, ring, trail, ripple
+│  ├─ Tilt.tsx                # pointer-following panel tilt
+│  ├─ ViewsPill.tsx           # live view counter
+│  ├─ presence-parts.tsx      # album art, activity rows, status
+│  ├─ ui.tsx                  # shared bits
+│  └─ icons.tsx               # Discord, Spotify, GitHub icons
 └─ lib/
-   ├─ lanyard.js              # REST snapshot + WebSocket
-   ├─ github.js               # public repo hook + cache
-   ├─ mal.js                  # anime list hook
-   ├─ nowPlaying.js           # unified Spotify / YouTube Music metadata
-   ├─ format.js               # status, avatar, time, activity helpers
-   ├─ demoPresence.js         # local preview presence
-   └─ hooks.js                # timers, typewriter, active section
+   ├─ lanyard.ts              # REST snapshot + WebSocket
+   ├─ github.ts               # public repo hook + cache
+   ├─ mal.ts                  # anime list hook
+   ├─ views.ts                # session-aware view counter
+   ├─ nowPlaying.ts           # unified Spotify / YouTube Music metadata
+   ├─ youtube.ts              # shared YouTube URL parsing
+   ├─ bgm.ts                  # default / Discord background music
+   ├─ sfx.ts                  # sample-based interface sounds
+   ├─ castoriceScene.ts       # 3D scene setup + face clips
+   ├─ tutorial.ts             # tutorial completion storage
+   ├─ gpu.ts                  # GPU tier probe
+   ├─ format.ts               # status, avatar, time, activity helpers
+   ├─ demoPresence.ts         # local preview presence
+   ├─ usePointerParallax.ts   # pointer parallax hook
+   └─ hooks.ts                # timers, typewriter, active section
 ```
 
 ---
@@ -289,6 +309,7 @@ src/
   - `op 1`: hello + heartbeat interval
   - `op 2`: subscribe to a user ID
   - `op 0` with `INIT_STATE` / `PRESENCE_UPDATE`: presence payload
+- The browser asks the same-origin `/api/lanyard` proxy first, so networks that block or cannot resolve `api.lanyard.rest` still get presence. The socket is only opened when the proxy is unavailable (static hosting), with polling as the fallback.
 - The socket reconnects with exponential backoff.
 - Spotify progress is calculated from `timestamps.start` and `timestamps.end`.
 - Avatars and activity assets come from the Discord CDN. Album art for YouTube Music is an external asset proxied through `media.discordapp.net/external/`.

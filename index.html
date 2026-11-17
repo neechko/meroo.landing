@@ -13,7 +13,7 @@
     <meta name="author" content="meroo" />
     <meta
       name="description"
-      content="meroo__ — a single-screen hub of live Discord activity, GitHub projects, MyAnimeList, and a direct contact channel. Aspiring backend developer building Discord bots with Node.js and AI."
+      content="meroo__: a single-screen hub of live Discord activity, GitHub projects, MyAnimeList, and a direct contact channel. Aspiring backend developer building Discord bots with Node.js and AI."
     />
 
     <meta property="og:type" content="website" />
@@ -39,12 +39,25 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
+      rel="preload"
+      as="style"
+      href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+    />
+    <link
       href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
       rel="stylesheet"
+      media="print"
+      onload="this.media='all'"
     />
+    <noscript>
+      <link
+        href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap"
+        rel="stylesheet"
+      />
+    </noscript>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/main.jsx"></script>
+    <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

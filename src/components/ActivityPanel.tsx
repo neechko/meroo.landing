@@ -1,0 +1,282 @@
+import { Activity, ExternalLink, Headphones, WifiOff } from 'lucide-react'
+import type { ActivityTimestamps, NowPlaying, Presence } from '../types'
+import { useAppIcons } from '../lib/appIcons'
+import { isIpOrigin } from '../lib/bgm'
+import { isCustomStatus, isMusicActivity, formatClock, timeAgo } from '../lib/format'
+import { useNow } from '../lib/hooks'
+import HudPanel, { PanelHead } from './HudPanel'
+import { PlayGlyph } from './icons'
+import { AlbumArt, ActivityRow, ClientStatus, CustomStatus } from './presence-parts'
+import { Equalizer, LiveBadge } from './ui'
+
+interface TrackProgressProps {
+  timestamps: ActivityTimestamps | null | undefined
+  className?: string
+}
+
+function TrackProgress({ timestamps, className = '' }: TrackProgressProps) {
+  const now = useNow(1000)
+  if (!timestamps?.start || !timestamps?.end) return null
+
+  const total = Math.max(1, timestamps.end - timestamps.start)
+  const elapsed = Math.min(total, Math.max(0, now - timestamps.start))
+  const percent = Math.min(100, (elapsed / total) * 100)
+
+  return (
+    <div className={className}>
+      <div className="relative h-1 w-full overflow-hidden rounded-full bg-white/10">
+        <div
+          className="absolute inset-y-0 left-0 rounded-full bg-gradient-to-r from-emerald-400 via-teal-300 to-cyan-300 transition-[width] duration-1000 ease-linear"
+          style={{ width: `${percent}%` }}
+        />
+      </div>
+      <div className="mt-1 flex items-center justify-between font-mono text-[9px] text-zinc-400">
+        <span>{formatClock(elapsed)}</span>
+        <span>{formatClock(total)}</span>
+      </div>
+    </div>
+  )
+}
+
+interface NowPlayingProps {
+  track: NowPlaying
+  onPlay: () => void
+  bgmActive?: boolean
+  bgmSkipped?: string
+  onRetryBgm?: () => void
+}
+
+function NowPlaying({
+  track,
+  onPlay,
+  bgmActive = false,
+  bgmSkipped = '',
+  onRetryBgm,
+}: NowPlayingProps) {
+  const ipOrigin = isIpOrigin()
+
+  return (
+    <div className="activity-now card-zoom relative overflow-hidden rounded-2xl border border-emerald-400/20 bg-emerald-500/[0.045] p-3 transition duration-300 hover:border-emerald-300/30">
+      {track.art ? (
+        <img
+          src={track.art}
+          alt=""
+          width={144}
+          height={144}
+          className="pointer-events-none absolute -right-8 -top-10 h-36 w-36 rounded-full object-cover opacity-25 blur-2xl"
+        />
+      ) : null}
+
+      <div className="relative flex flex-col gap-2.5 sm:flex-row sm:items-start sm:gap-3">
+        <div className="flex min-w-0 flex-1 items-start gap-3">
+          <AlbumArt
+            src={track.art}
+            alt={track.album || track.title}
+            className="activity-now-art h-[52px] w-[52px] shrink-0 sm:h-[60px] sm:w-[60px]"
+            rounded="rounded-xl"
+          />
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2 py-0.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.14em] text-emerald-300 ring-1 ring-emerald-400/25">
+                <Equalizer className="h-2.5" />
+                {track.source}
+              </span>
+              {bgmActive ? (
+                <span className="inline-flex items-center gap-1 rounded-full bg-violet-500/10 px-2 py-0.5 font-mono text-[8.5px] font-semibold uppercase tracking-[0.14em] text-violet-200 ring-1 ring-violet-400/25">
+                  <span className="h-1 w-1 rounded-full bg-violet-300 shadow-[0_0_6px_1px_rgba(196,181,253,0.8)]" />
+                  bgm
+                </span>
+              ) : null}
+            </div>
+            <p className="activity-now-title mt-1.5 line-clamp-2 font-display text-[14px] font-semibold leading-tight text-white sm:line-clamp-1 sm:text-[15px]">
+              {track.title}
+            </p>
+            <p className="truncate text-[10.5px] text-zinc-400 sm:text-[11px]">
+              {track.artist || 'Unknown artist'}
+            </p>
+            {track.album ? (
+              <p className="activity-now-album truncate font-mono text-[8.5px] uppercase tracking-[0.12em] text-zinc-400">{track.album}</p>
+            ) : null}
+            {bgmSkipped ? (
+              <p className="mt-1 text-[10px] leading-snug text-zinc-400">
+                {ipOrigin
+                  ? 'YouTube blocks embeds on IP addresses, so the Castorice theme plays instead. Open the site through its domain to hear the Discord track.'
+                  : 'YouTube blocks embedding for this track, so the Castorice theme plays instead.'}{' '}
+                {onRetryBgm ? (
+                  <button
+                    type="button"
+                    onClick={onRetryBgm}
+                    className="tap-44 ml-1.5 inline-flex items-center font-medium text-violet-300 underline decoration-violet-400/40 underline-offset-2 transition hover:text-violet-200"
+                  >
+                    Try again
+                  </button>
+                ) : null}
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {/* Actions stay on the side of the card header on desktop. On phones
+            they move below the track info so the title keeps the full width,
+            and they remain above the activity rows either way. */}
+        <div className="relative z-[2] flex w-full shrink-0 items-stretch gap-1.5 sm:w-auto sm:flex-col sm:gap-4">
+          {track.embed ? (
+            <button
+              type="button"
+              onClick={onPlay}
+              aria-label={`Play ${track.title} here`}
+              title="Play here"
+              className="group/play tap-44 inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-violet-300/30 bg-gradient-to-r from-violet-500/25 via-indigo-500/20 to-cyan-400/20 px-2.5 py-2 text-[10px] font-semibold text-violet-100 transition hover:border-cyan-300/45 hover:from-violet-500/35 hover:to-cyan-400/30 hover:text-white active:scale-95 sm:flex-none sm:py-1.5"
+            >
+              <PlayGlyph className="h-3.5 w-3.5 text-cyan-200 transition group-hover/play:text-cyan-100" />
+              Play here
+            </button>
+          ) : null}
+          {track.external ? (
+            <a
+              href={track.external}
+              target="_blank"
+              rel="noreferrer"
+              className="tap-44 inline-flex flex-1 items-center justify-center gap-1.5 rounded-lg border border-white/[0.08] bg-white/[0.03] px-2.5 py-2 text-[10px] font-medium text-zinc-300 transition hover:border-white/20 hover:text-white sm:flex-none sm:py-1.5"
+            >
+              <ExternalLink className="h-3 w-3" />
+              Open source
+            </a>
+          ) : null}
+        </div>
+      </div>
+
+      <TrackProgress timestamps={track.progress} className="relative mt-3" />
+    </div>
+  )
+}
+
+function ActivitySkeleton() {
+  return (
+    <div className="animate-pulse space-y-2.5">
+      <div className="h-14 rounded-xl bg-white/[0.04]" />
+      <div className="h-24 rounded-2xl bg-white/[0.04]" />
+      <div className="h-12 rounded-xl bg-white/[0.03]" />
+    </div>
+  )
+}
+
+export interface ActivityPanelProps {
+  presence: Presence | null
+  nowPlaying: NowPlaying | null
+  loading: boolean
+  isLive: boolean
+  isDemo: boolean
+  lastUpdate: number | null
+  error: string | null
+  onPlay: () => void
+  bgmActive?: boolean
+  bgmSkipped?: string
+  onRetryBgm?: () => void
+  className?: string
+}
+
+export default function ActivityPanel({
+  presence,
+  nowPlaying,
+  loading,
+  isLive,
+  isDemo,
+  lastUpdate,
+  error,
+  onPlay,
+  bgmActive = false,
+  bgmSkipped = '',
+  onRetryBgm,
+  className = '',
+}: ActivityPanelProps) {
+  const now = useNow(15_000)
+  const activities = (presence?.activities ?? []).filter(
+    (item) => !isCustomStatus(item) && !isMusicActivity(item),
+  )
+  const appIcons = useAppIcons(activities.map((item) => item.application_id))
+
+  const statusNote = loading
+    ? 'connecting to discord'
+    : isDemo
+      ? 'preview data · local only'
+      : isLive
+        ? `synced ${timeAgo(lastUpdate, now)}`
+        : 'presence offline'
+
+  return (
+    <HudPanel className={`flex min-h-0 flex-col ${className}`}>
+      <PanelHead
+        icon={Activity}
+        title="Live signal"
+        meta={isLive ? 'discord presence · realtime' : statusNote}
+        action={<LiveBadge isLive={isLive} isDemo={isDemo} />}
+      />
+
+      <div className="activity-feed hud-scroll relative z-[2] flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-3.5">
+        {loading && !presence ? <ActivitySkeleton /> : null}
+
+        {presence ? (
+          <>
+            <CustomStatus presence={presence} className="text-[12px]" />
+
+            {nowPlaying ? (
+              <NowPlaying
+                track={nowPlaying}
+                onPlay={onPlay}
+                bgmActive={bgmActive}
+                bgmSkipped={bgmSkipped}
+                onRetryBgm={onRetryBgm}
+              />
+            ) : (
+              <div className="rounded-2xl border border-dashed border-white/[0.09] bg-white/[0.015] p-3.5">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-white/10 bg-white/[0.03] text-zinc-400">
+                    <Headphones className="h-5 w-5" />
+                  </span>
+                  <div className="min-w-0">
+                    <p className="text-[12px] font-semibold text-zinc-200">
+                      Nothing on the music channel
+                    </p>
+                    <p className="text-[10px] leading-relaxed text-zinc-400">
+                      When a track starts on Discord, the cover and a player appear here.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {activities.length ? (
+              <div className="grid gap-1.5">
+                {activities.slice(0, 2).map((activity) => (
+                  <ActivityRow
+                    key={activity.id ?? activity.name}
+                    activity={activity}
+                    fallbackSrc={appIcons[activity.application_id ?? ''] ?? null}
+                    dense
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-xl border border-white/[0.06] bg-white/[0.02] px-3 py-2.5 text-[10px] leading-relaxed text-zinc-400">
+                No apps open right now. The channel is quiet.
+              </div>
+            )}
+          </>
+        ) : null}
+
+        {error && !isDemo ? (
+          <div className="flex items-start gap-2 rounded-xl border border-amber-400/20 bg-amber-400/[0.06] px-3 py-2.5 text-[10px] leading-relaxed text-amber-200/80">
+            <WifiOff className="mt-0.5 h-3.5 w-3.5 shrink-0" />
+            <span>Discord did not answer. Reconnecting in the background.</span>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="relative z-[2] flex shrink-0 items-center justify-between gap-2 border-t border-white/[0.06] px-3.5 py-2">
+        <ClientStatus presence={presence} />
+        <p className="font-mono text-[8.5px] uppercase tracking-[0.14em] text-zinc-400">{statusNote}</p>
+      </div>
+    </HudPanel>
+  )
+}

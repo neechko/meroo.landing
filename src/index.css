@@ -17,7 +17,7 @@
   --color-castorice-cyan: #67e8f9;
 }
 
-/* ───────────────────────── BASE ───────────────────────── */
+/* Base */
 @layer base {
   html,
   body,
@@ -50,7 +50,7 @@
     background: #08050f;
   }
   ::-webkit-scrollbar-thumb {
-    background: linear-gradient(#6d28d9, #a21caf);
+    background: linear-gradient(#6d28d9, #4f46e5);
     border-radius: 999px;
     border: 2px solid #08050f;
   }
@@ -59,33 +59,27 @@
     outline: 2px solid #a78bfa;
     outline-offset: 3px;
   }
+
+  /* Tailwind v4 leaves buttons on the arrow cursor; restore the affordance. */
+  a[href],
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  summary,
+  label[for],
+  select:not(:disabled) {
+    cursor: pointer;
+  }
+
+  :disabled,
+  [aria-disabled="true"] {
+    cursor: not-allowed;
+  }
 }
 
-/* ─────────────────────── COMPONENTS ───────────────────── */
+/* Components */
 @layer components {
-  .glass {
-    background:
-      linear-gradient(155deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.015));
-    border: 1px solid rgba(255, 255, 255, 0.09);
-    backdrop-filter: blur(22px);
-    -webkit-backdrop-filter: blur(22px);
-    box-shadow:
-      0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
-      0 24px 60px -30px rgba(0, 0, 0, 0.9);
-  }
-
-  .glass-strong {
-    background: linear-gradient(160deg, rgba(24, 16, 46, 0.92), rgba(10, 6, 23, 0.94));
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    backdrop-filter: blur(26px);
-    -webkit-backdrop-filter: blur(26px);
-    box-shadow:
-      0 1px 0 0 rgba(255, 255, 255, 0.07) inset,
-      0 30px 80px -35px rgba(0, 0, 0, 0.95);
-  }
-
   .text-gradient {
-    background: linear-gradient(100deg, #c4b5fd 0%, #f0abfc 32%, #93c5fd 64%, #a5f3fc 100%);
+    background: linear-gradient(100deg, #c4b5fd 0%, #a5b4fc 38%, #a5f3fc 100%);
     background-size: 220% auto;
     -webkit-background-clip: text;
     background-clip: text;
@@ -94,7 +88,7 @@
   }
 
   .text-gradient-soft {
-    background: linear-gradient(100deg, #ddd6fe, #f5d0fe 55%, #bfdbfe);
+    background: linear-gradient(100deg, #ddd6fe, #c7d2fe 55%, #bae6fd);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -126,21 +120,23 @@
 
   .shine {
     position: relative;
-    overflow: hidden;
     isolation: isolate;
   }
-  .shine::after {
+  /* Sweep lives on ::before so ::after stays free for .tap-44. */
+  .shine::before {
     content: "";
     position: absolute;
     inset: 0;
-    background: linear-gradient(110deg, transparent 25%, rgba(255, 255, 255, 0.35) 48%, transparent 62%);
-    transform: translateX(-130%);
-    transition: transform 0.75s cubic-bezier(0.22, 1, 0.36, 1);
+    border-radius: inherit;
+    background: linear-gradient(110deg, transparent 25%, rgba(255, 255, 255, 0.35) 48%, transparent 62%) no-repeat;
+    background-size: 250% 100%;
+    background-position: 100% 0;
     pointer-events: none;
     z-index: 1;
+    transition: background-position 0.75s cubic-bezier(0.22, 1, 0.36, 1);
   }
-  .shine:hover::after {
-    transform: translateX(130%);
+  .shine:hover::before {
+    background-position: 0% 0;
   }
 
   .equalizer {
@@ -172,7 +168,7 @@
   }
 
   .avatar-ring {
-    background: conic-gradient(from var(--angle, 0deg), #7c3aed, #d946ef, #22d3ee, #6366f1, #7c3aed);
+    background: conic-gradient(from var(--angle, 0deg), #7c3aed, #6366f1, #22d3ee, #8b5cf6, #7c3aed);
     animation: ring-spin 7s linear infinite;
   }
 
@@ -192,6 +188,21 @@
   .hide-scrollbar::-webkit-scrollbar {
     display: none;
   }
+
+  /* Keeps the visual size while guaranteeing a 44x44 fingertip target. */
+  .tap-44 {
+    position: relative;
+  }
+  .tap-44::after {
+    content: "";
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    width: max(100%, 44px);
+    height: max(100%, 44px);
+    transform: translate(-50%, -50%);
+    pointer-events: auto;
+  }
 }
 
 @property --angle {
@@ -200,7 +211,7 @@
   inherits: false;
 }
 
-/* ─────────────────────── KEYFRAMES ────────────────────── */
+/* Keyframes */
 @keyframes gradient-pan {
   to { background-position: 220% center; }
 }
@@ -250,7 +261,7 @@
   50% { opacity: 1; }
 }
 
-/* ───────────────────── UTIL ANIMASI ───────────────────── */
+/* Utility animations */
 .animate-float {
   animation: float-soft 7s ease-in-out infinite;
 }
@@ -264,7 +275,7 @@
   animation: pulse-soft 2.6s ease-in-out infinite;
 }
 
-/* ───────────────────── CUSTOM CURSOR ───────────────────── */
+/* Custom cursor */
 .cursor-shell {
   position: fixed;
   inset: 0;
@@ -284,7 +295,6 @@ html.cursor-visible .cursor-shell {
   inset: 0;
 }
 
-.cursor-dot,
 .cursor-ring,
 .cursor-trail,
 .cursor-ripple {
@@ -294,15 +304,6 @@ html.cursor-visible .cursor-shell {
   border-radius: 9999px;
   pointer-events: none;
   will-change: transform;
-}
-
-.cursor-dot {
-  width: 6px;
-  height: 6px;
-  background: #f8f5ff;
-  box-shadow:
-    0 0 10px 1px rgba(167, 139, 250, 0.9),
-    0 0 28px 4px rgba(124, 58, 237, 0.4);
 }
 
 .cursor-ring {
@@ -347,19 +348,6 @@ html.cursor-visible .cursor-shell {
   }
 }
 
-@media (hover: hover) and (pointer: fine) {
-  html.cursor-ready,
-  html.cursor-ready body,
-  html.cursor-ready * {
-    cursor: none !important;
-  }
-  html.cursor-ready input,
-  html.cursor-ready textarea,
-  html.cursor-ready select {
-    cursor: auto !important;
-  }
-}
-
 @media (hover: none), (pointer: coarse) {
   .cursor-shell {
     display: none;
@@ -377,7 +365,35 @@ html.cursor-visible .cursor-shell {
   }
 }
 
-/* ─────────────────── SINGLE-SCREEN HUD SHELL ─────────────────── */
+/* Header motion switch: stops the ambient loops without touching layout or
+   the pointer-driven tilt (which is a direct response, not an idle loop). */
+html.motion-off .aurora-blob,
+html.motion-off .text-gradient,
+html.motion-off .marquee-track,
+html.motion-off .avatar-ring,
+html.motion-off .status-ring::after,
+html.motion-off .equalizer span,
+html.motion-off .animate-float,
+html.motion-off .animate-blink,
+html.motion-off .animate-spin-slow,
+html.motion-off .animate-pulse-soft,
+html.motion-off .boot-scanline {
+  animation: none !important;
+}
+
+html.motion-off .hud-sheen,
+html.motion-off .scene-sheen,
+html.motion-off .intro-sheen,
+html.motion-off .pointer-glow {
+  display: none;
+}
+
+html.motion-off .scene-parallax,
+html.motion-off .intro-parallax {
+  transform: none !important;
+}
+
+/* Single-screen HUD shell */
 .hud-shell {
   height: 100dvh;
   width: 100%;
@@ -392,16 +408,15 @@ html.cursor-visible .cursor-shell {
   border: 1px solid rgba(196, 181, 253, 0.13);
   background:
     linear-gradient(155deg, rgba(196, 181, 253, 0.07), rgba(255, 255, 255, 0.01)),
-    linear-gradient(180deg, rgba(12, 9, 32, 0.9), rgba(5, 3, 14, 0.95));
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+    linear-gradient(180deg, rgba(12, 9, 32, 0.94), rgba(5, 3, 14, 0.97));
   box-shadow:
     0 1px 0 0 rgba(255, 255, 255, 0.07) inset,
     0 0 0 1px rgba(103, 232, 249, 0.025) inset,
     0 30px 80px -42px rgba(0, 0, 0, 0.95);
   transform-style: preserve-3d;
+  /* No transform transition here: Tilt writes `style.transform` every frame and
+     already eases it. A CSS transition on top would lag behind the pointer. */
   transition:
-    transform 0.4s cubic-bezier(0.22, 1, 0.36, 1),
     box-shadow 0.4s ease,
     border-color 0.4s ease;
 }
@@ -411,9 +426,11 @@ html.cursor-visible .cursor-shell {
   position: absolute;
   inset: 0;
   border-radius: inherit;
-  background:
-    radial-gradient(ellipse 85% 55% at 50% -18%, rgba(139, 92, 246, 0.18), transparent 62%),
-    radial-gradient(ellipse 60% 40% at 100% 110%, rgba(103, 232, 249, 0.06), transparent 70%);
+  background: linear-gradient(
+    180deg,
+    rgba(196, 181, 253, 0.05),
+    transparent 18%
+  );
   pointer-events: none;
 }
 
@@ -554,7 +571,7 @@ html.cursor-visible .cursor-shell {
   display: none;
 }
 
-/* ───────────────────────── INTRO GATE ───────────────────────── */
+/* Intro gate */
 /* No ken-burns here: the mouse parallax is the only motion, so the wallpaper
    stays calm and the pointer tracking reads as smooth instead of busy. */
 .intro-bg {
@@ -562,7 +579,7 @@ html.cursor-visible .cursor-shell {
   will-change: transform, filter;
 }
 
-/* No decorative corner brackets around the cold open — the wallpaper, copy and
+/* No decorative corner brackets around the cold open: the wallpaper, copy and
    pointer parallax carry it on their own. */
 
 .intro-word {
@@ -973,7 +990,7 @@ html.cursor-visible .cursor-shell {
   transform: scaleX(1);
 }
 
-/* ─────────────────────── HUD ENTRANCE ───────────────────────── */
+/* HUD entrance */
 @keyframes hud-zoom {
   0% {
     opacity: 0;
@@ -1009,7 +1026,7 @@ html.cursor-visible .cursor-shell {
   }
 }
 
-/* ───────────────────────── CARD ZOOM ────────────────────────── */
+/* Card zoom */
 @keyframes card-zoom {
   0% {
     opacity: 0;
@@ -1025,12 +1042,10 @@ html.cursor-visible .cursor-shell {
   animation: card-zoom 0.5s cubic-bezier(0.22, 1, 0.36, 1) backwards;
 }
 
-/* ───────────────────────── SMALL SCREENS ────────────────────── */
+/* Small screens */
 @media (max-width: 1023px) {
   .hud-panel {
     border-radius: 14px;
-    backdrop-filter: blur(10px);
-    -webkit-backdrop-filter: blur(10px);
   }
   .hud-panel::after {
     opacity: 0.3;
@@ -1040,16 +1055,7 @@ html.cursor-visible .cursor-shell {
   }
 }
 
-/* Keep the custom cursor above the HUD but below nothing else. */
-@media (hover: hover) and (pointer: fine) {
-  .hud-shell a,
-  .hud-shell button,
-  .hud-shell [role="button"] {
-    cursor: none;
-  }
-}
-
-/* ─────────────────────── POINTER GLOW ───────────────────────── */
+/* Pointer glow */
 /* One small composited layer moved with transform. Much cheaper than
    repainting two full-screen radial gradients on every mouse move. */
 .pointer-glow {
@@ -1069,13 +1075,11 @@ html.cursor-visible .cursor-shell {
   pointer-events: none;
 }
 
-/* ─────────────────────── PERFORMANCE MODE ───────────────────── */
+/* Performance mode */
 /* Added automatically on low-core / low-memory machines or when the
    measured frame rate stays below 42fps. It keeps the look but removes
    the compositing work that makes the cursor feel heavy. */
 html.perf-lite .hud-panel {
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
   background:
     linear-gradient(155deg, rgba(196, 181, 253, 0.06), rgba(255, 255, 255, 0.008)),
     linear-gradient(180deg, rgba(12, 9, 32, 0.97), rgba(5, 3, 14, 0.99));
@@ -1100,6 +1104,12 @@ html.perf-lite .cursor-trail:nth-child(n + 3) {
 html.perf-lite .hud-rise {
   animation-name: hud-zoom-lite;
   animation-duration: 0.55s;
+}
+/* `perf-lite-late` is added by the FPS sampler after the entrance has already
+   played. Switching animation names there would restart the whole stagger, so
+   leave the finished panels at rest instead. */
+html.perf-lite-late .hud-rise {
+  animation: none;
 }
 /* Keep the warp readable on weak GPUs: flash + rings + sweep are cheap,
    the masked conic/linear layers are not. */
@@ -1126,7 +1136,7 @@ html.perf-lite .avatar-ring {
   animation: none;
 }
 
-/* ─────────────────────── BOOT / COLD OPEN ───────────────────── */
+/* Boot / cold open */
 .boot-screen {
   background:
     radial-gradient(ellipse 70% 55% at 50% 48%, rgba(24, 12, 54, 0.9), transparent 72%),
@@ -1162,7 +1172,7 @@ html.perf-lite .avatar-ring {
   100% { transform: translateY(86vh); opacity: 0; }
 }
 
-/* ─────────────────── MOUSE MIRROR / PARALLAX ────────────────── */
+/* Mouse mirror / parallax */
 .scene-parallax,
 .intro-parallax {
   will-change: transform;
@@ -1191,7 +1201,7 @@ html.perf-lite .avatar-ring {
   );
 }
 
-/* ─────────────────────── PRELOADER ─────────────────────── */
+/* Preloader */
 /* Ten seconds of near-black. One dim wordmark, and a single water line that
    rises from the bottom of `meroo__` to the top. Nothing else moves. */
 .preloader {
@@ -1467,7 +1477,7 @@ html.perf-lite .avatar-ring {
   }
 }
 
-/* ──────────────────────── TUTORIAL CARD ─────────────────────── */
+/* Tutorial card */
 .tutorial-card {
   overflow: hidden;
   border-radius: 16px;
@@ -1478,8 +1488,6 @@ html.perf-lite .avatar-ring {
     0 1px 0 0 rgba(255, 255, 255, 0.06) inset,
     0 0 0 1px rgba(103, 232, 249, 0.04) inset,
     0 30px 80px -30px rgba(0, 0, 0, 0.95);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
 }
 
 /* Castorice as a visual-novel guide: portrait on the left, dialogue on the
@@ -1555,7 +1563,7 @@ html.perf-lite .avatar-ring {
   }
 }
 
-/* ───────────────────── CASTORICE 3D ARCHIVE ─────────────────── */
+/* Castorice 3D archive */
 /* The archive is a WebGL canvas now; the wrapper only supplies the stage. */
 .castorice-canvas {
   display: block;
@@ -1563,7 +1571,7 @@ html.perf-lite .avatar-ring {
   height: 100%;
 }
 
-/* ─────────────────── SHORT / OLD LAPTOPS ────────────────────── */
+/* Short / old laptops */
 @media (max-height: 780px) and (min-width: 1280px) {
   .hud-topbar {
     height: 3rem;
@@ -1631,7 +1639,7 @@ html.perf-lite .avatar-ring {
   }
 }
 
-/* ───────────────────── PERFORMANCE ADDITIONS ────────────────── */
+/* Performance additions */
 html.perf-lite .hud-sheen,
 html.perf-lite .scene-sheen,
 html.perf-lite .intro-sheen,
