@@ -52,7 +52,7 @@ declare global {
 const STORAGE_KEY = 'meroo.sfx'
 const THROTTLE_MS = 45
 // UI effects sit at 60% of full scale, as requested.
-const MASTER_VOLUME = 0.4
+const MASTER_VOLUME = 0.1
 
 /**
  * `start` / `length` are measured from each file's decoded envelope, so the
