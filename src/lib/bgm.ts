@@ -90,8 +90,8 @@ declare global {
 const DEFAULT_URL = '/music/castorice-epitaph.mp3'
 // Music sits at 80% of full scale; the UI samples run through their own 60%
 // master, so the effects still cut through the track.
-const DEFAULT_VOLUME = 0.8
-const YT_VOLUME = 80
+const DEFAULT_VOLUME = 0.5
+const YT_VOLUME = 60
 const YT_API_TIMEOUT = 12_000
 const YT_READY_TIMEOUT = 15_000
 // YouTube errors 2/100/101/150 mean the embed can never play this video
